@@ -4,11 +4,43 @@ import { OpenAI } from 'openai';
 import './App.css';
 import { Stream } from 'openai/streaming.mjs';
 import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
+import {
+  ChatCompletionMessageParam,
+  ChatCompletionTool,
+} from 'openai/resources/chat/completions';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+interface Tool extends ChatCompletionTool {
+  execute: () => Promise<string>;
 }
+
+const tools: Tool[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'get_weather',
+      description: 'Get the current weather',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: [],
+      },
+    },
+    execute: async () => {
+      // Replace with actual API call
+      return 'sunny, 72°F';
+    },
+  },
+  // Add more tools like:
+  // {
+  //   type: 'function',
+  //   function: {
+  //     name: 'get_time',
+  //     description: 'Get current time',
+  //     parameters: { type: 'object', properties: {}, required: [] },
+  //   },
+  //   execute: async () => new Date().toLocaleTimeString(),
+  // },
+];
 
 const models = [
   {
@@ -35,7 +67,7 @@ const models = [
 
 function App() {
   const [prompt, setPrompt] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatCompletionMessageParam[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [model, setModel] = useState(models[0]);
 
@@ -50,18 +82,44 @@ function App() {
 
     setIsLoading(true);
 
-    const userMessage: Message = { role: 'user', content: prompt };
+    const userMessage: ChatCompletionMessageParam = {
+      role: 'user',
+      content: prompt,
+    };
     setMessages((prevMessages) => [...prevMessages, userMessage]);
 
     try {
-      const assistantMessage: Message = { role: 'assistant', content: '' };
+      const assistantMessage: ChatCompletionMessageParam = {
+        role: 'assistant',
+        content: '',
+      };
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
       const stream = await openai.chat.completions.create({
-        messages: [...messages, userMessage].map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        })),
+        messages: [
+          ...(model.stream
+            ? [
+                {
+                  role: 'system',
+                  content: `
+              You have access to the following tools:
+                - get_weather: Returns the current weather
+                
+                To use a tool, respond with: <tool>get_weather</tool>
+                Wait for the tool response before continuing.
+            `,
+                },
+              ]
+            : [
+                {
+                  role: 'user',
+                  content:
+                    'You have access to these tools:\n- get_weather: Returns the current weather\n\nTo use a tool, respond with: <tool>get_weather</tool>\nWait for the tool response before continuing.\n\nPlease acknowledge these instructions.',
+                },
+              ]),
+          ...messages,
+          userMessage,
+        ] as ChatCompletionMessageParam[],
         model: model.name,
         stream: model.stream,
       });
@@ -74,6 +132,19 @@ function App() {
           const content = chunk.choices[0]?.delta?.content || '';
           fullContent += content;
 
+          const toolMatch = fullContent.match(/<tool>(\w+)<\/tool>/);
+          if (toolMatch) {
+            const toolName = toolMatch[1];
+            const tool = tools.find((t) => t.function.name === toolName);
+            if (tool) {
+              const toolResult = await tool.execute();
+              fullContent = fullContent.replace(
+                /<tool>\w+<\/tool>/,
+                `The current weather is: ${toolResult}`
+              );
+            }
+          }
+
           setMessages((prevMessages) => {
             const newMessages = [...prevMessages];
             newMessages[newMessages.length - 1].content = fullContent;
@@ -82,7 +153,20 @@ function App() {
         }
       } else {
         const response = stream as OpenAI.Chat.ChatCompletion;
-        const content = response.choices[0]?.message?.content || '';
+        let content = response.choices[0]?.message?.content || '';
+
+        const toolMatch = content.match(/<tool>(\w+)<\/tool>/);
+        if (toolMatch) {
+          const toolName = toolMatch[1];
+          const tool = tools.find((t) => t.function.name === toolName);
+          if (tool) {
+            const toolResult = await tool.execute();
+            content = content.replace(
+              /<tool>\w+<\/tool>/,
+              `The current weather is: ${toolResult}`
+            );
+          }
+        }
 
         setMessages((prevMessages) => {
           const newMessages = [...prevMessages];
@@ -114,7 +198,7 @@ function App() {
             key={index}
             className={`message ${message.role}`}
             dangerouslySetInnerHTML={{
-              __html: marked(message.content, { breaks: true }),
+              __html: marked(message.content as string, { breaks: true }),
             }}
           />
         ))}
