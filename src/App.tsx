@@ -1,69 +1,13 @@
 import { useState } from 'react';
 import { marked } from 'marked';
 import { OpenAI } from 'openai';
-import './App.css';
 import { Stream } from 'openai/streaming.mjs';
 import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
-import {
-  ChatCompletionMessageParam,
-  ChatCompletionTool,
-} from 'openai/resources/chat/completions';
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
-interface Tool extends ChatCompletionTool {
-  execute: () => Promise<string>;
-}
-
-const tools: Tool[] = [
-  {
-    type: 'function',
-    function: {
-      name: 'get_weather',
-      description: 'Get the current weather',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: [],
-      },
-    },
-    execute: async () => {
-      // Replace with actual API call
-      return 'sunny, 72°F';
-    },
-  },
-  // Add more tools like:
-  // {
-  //   type: 'function',
-  //   function: {
-  //     name: 'get_time',
-  //     description: 'Get current time',
-  //     parameters: { type: 'object', properties: {}, required: [] },
-  //   },
-  //   execute: async () => new Date().toLocaleTimeString(),
-  // },
-];
-
-const models = [
-  {
-    name: 'o1-preview',
-    label: 'o1 Preview',
-    stream: false,
-  },
-  {
-    name: 'o1-mini-2024-09-12',
-    label: 'o1 Mini',
-    stream: false,
-  },
-  {
-    name: 'gpt-4o-mini',
-    label: 'GPT-4o Mini',
-    stream: true,
-  },
-  {
-    name: 'gpt-4o-2024-08-06',
-    label: 'GPT-4o',
-    stream: true,
-  },
-];
+import { models, systemPrompt } from './constants';
+import { processToolUsage } from './utils';
+import './App.css';
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -101,20 +45,13 @@ function App() {
             ? [
                 {
                   role: 'system',
-                  content: `
-              You have access to the following tools:
-                - get_weather: Returns the current weather
-                
-                To use a tool, respond with: <tool>get_weather</tool>
-                Wait for the tool response before continuing.
-            `,
+                  content: systemPrompt,
                 },
               ]
             : [
                 {
                   role: 'user',
-                  content:
-                    'You have access to these tools:\n- get_weather: Returns the current weather\n\nTo use a tool, respond with: <tool>get_weather</tool>\nWait for the tool response before continuing.\n\nPlease acknowledge these instructions.',
+                  content: systemPrompt,
                 },
               ]),
           ...messages,
@@ -132,22 +69,12 @@ function App() {
           const content = chunk.choices[0]?.delta?.content || '';
           fullContent += content;
 
-          const toolMatch = fullContent.match(/<tool>(\w+)<\/tool>/);
-          if (toolMatch) {
-            const toolName = toolMatch[1];
-            const tool = tools.find((t) => t.function.name === toolName);
-            if (tool) {
-              const toolResult = await tool.execute();
-              fullContent = fullContent.replace(
-                /<tool>\w+<\/tool>/,
-                `The current weather is: ${toolResult}`
-              );
-            }
-          }
+          // Process any complete tool usage
+          const processedContent = await processToolUsage(fullContent);
 
           setMessages((prevMessages) => {
             const newMessages = [...prevMessages];
-            newMessages[newMessages.length - 1].content = fullContent;
+            newMessages[newMessages.length - 1].content = processedContent;
             return newMessages;
           });
         }
@@ -155,18 +82,8 @@ function App() {
         const response = stream as OpenAI.Chat.ChatCompletion;
         let content = response.choices[0]?.message?.content || '';
 
-        const toolMatch = content.match(/<tool>(\w+)<\/tool>/);
-        if (toolMatch) {
-          const toolName = toolMatch[1];
-          const tool = tools.find((t) => t.function.name === toolName);
-          if (tool) {
-            const toolResult = await tool.execute();
-            content = content.replace(
-              /<tool>\w+<\/tool>/,
-              `The current weather is: ${toolResult}`
-            );
-          }
-        }
+        // Process any tool usage in the complete response
+        content = await processToolUsage(content);
 
         setMessages((prevMessages) => {
           const newMessages = [...prevMessages];
@@ -186,6 +103,7 @@ function App() {
   function handleClear() {
     if (isLoading) return;
     setMessages([]);
+    setPrompt('');
   }
 
   return (
@@ -214,16 +132,16 @@ function App() {
           value={prompt}
           onChange={(e) => {
             setPrompt(e.target.value);
-            handleClear();
           }}
           placeholder="Enter your prompt..."
           disabled={isLoading}
         />
         <select
           value={model.name}
-          onChange={(e) =>
-            setModel(models.find((m) => m.name === e.target.value)!)
-          }
+          onChange={(e) => {
+            setModel(models.find((m) => m.name === e.target.value)!);
+            handleClear();
+          }}
           disabled={isLoading}
         >
           {models.map((model) => (
