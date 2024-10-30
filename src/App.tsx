@@ -212,7 +212,10 @@ function App() {
         )}
         <input
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) => {
+            setPrompt(e.target.value);
+            handleClear();
+          }}
           placeholder="Enter your prompt..."
           disabled={isLoading}
         />
