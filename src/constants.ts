@@ -26,18 +26,22 @@ export const models = [
 ];
 
 export const systemPrompt = `
-  You have access to the following tools:
-  ${tools
-    .map((tool) => `- ${tool.function.name}: ${tool.function.description}`)
-    .join('\n')}
+You have access to the following tools:
+${tools
+  .map((tool) => `- ${tool.function.name}: ${tool.function.description}`)
+  .join('\n')}
 
-  To use a tool, write your response in this format:
-  1. Explain what you're going to do
-  2. Use the tool in this format: <tool>tool_name</tool>parameters
-  3. Wait for the result and continue the conversation
+To use a tool, write your response in this format:
+1. Explain what you're going to do
+2. Use the tool in this format: <tool>web_browser</tool>website_url
+   IMPORTANT: Always use complete domain names with .com:
+   - Use: weather.com (NOT just "weather")
+   - Use: google.com (NOT just "google")
+   - Use: amazon.com (NOT just "amazon")
+3. Wait for the result and continue the conversation
 
-  Example:
-  Let me check that website for you.
-  <tool>web_browser</tool>https://example.com
-  Based on the website content...
+Example:
+Let me check the weather website for you.
+<tool>web_browser</tool>weather.com
+Based on the website content...
 `;
