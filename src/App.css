@@ -1,0 +1,62 @@
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.message {
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  max-width: 80%;
+}
+
+.message.user {
+  background-color: #e3f2fd;
+  align-self: flex-end;
+}
+
+.message.assistant {
+  background-color: #f5f5f5;
+  align-self: flex-start;
+}
+
+.input-form {
+  width: 100%;
+  display: flex;
+  gap: 1rem;
+  position: relative;
+  margin-top: 3em;
+}
+
+.input-form input {
+  width: 100%;
+  flex-grow: 1;
+}
+
+.input-form button {
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.input-form button:hover {
+  background-color: #f5f5f5;
+}
+
+.input-form button:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.input-form .clear-conversation {
+  cursor: pointer;
+  position: absolute;
+  top: -2em;
+  left: 0;
+  font-size: 0.8em;
+}

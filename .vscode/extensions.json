@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "mikestead.dotenv",
+    "eamodio.gitlens",
+    "esbenp.prettier-vscode",
+    "augustocdias.tasks-shell-input"
+  ]
+}
