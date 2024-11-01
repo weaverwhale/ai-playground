@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { marked } from 'marked';
 import { OpenAI } from 'openai';
 import { Stream } from 'openai/streaming.mjs';
@@ -14,6 +14,40 @@ function App() {
   const [messages, setMessages] = useState<ChatCompletionMessageParam[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [model, setModel] = useState(models[0]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = useCallback((e: Event) => {
+    const messagesContainer = messagesContainerRef.current;
+    if (!messagesContainer || !e.isTrusted) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+    const isScrolledToBottom = scrollHeight - clientHeight - scrollTop < 50;
+
+    setAutoScroll((current) => {
+      if (current !== isScrolledToBottom) {
+        return isScrolledToBottom;
+      }
+      return current;
+    });
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    if (autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [autoScroll]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    const messagesContainer = messagesContainerRef.current;
+    messagesContainer?.addEventListener('scroll', handleScroll);
+    return () => messagesContainer?.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   const openai = new OpenAI({
     apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -106,11 +140,22 @@ function App() {
     setPrompt('');
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp' && messages.length > 0) {
+      const lastUserMessage = [...messages]
+        .reverse()
+        .find((msg) => msg.role === 'user');
+      if (lastUserMessage?.content) {
+        setPrompt(lastUserMessage.content as string);
+      }
+    }
+  };
+
   return (
     <div className="container">
       <h1>Chat 🤖</h1>
 
-      <div className="messages">
+      <div className="messages" ref={messagesContainerRef}>
         {messages.map((message, index) => (
           <div
             key={index}
@@ -120,6 +165,7 @@ function App() {
             }}
           />
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <form className="input-form" onSubmit={handleSubmit}>
@@ -133,6 +179,7 @@ function App() {
           onChange={(e) => {
             setPrompt(e.target.value);
           }}
+          onKeyDown={handleKeyDown}
           placeholder="Enter your prompt..."
           disabled={isLoading}
         />
