@@ -159,7 +159,10 @@ function App() {
             key={index}
             className={`message ${message.role}`}
             dangerouslySetInnerHTML={{
-              __html: marked(message.content as string, { breaks: true }),
+              __html: marked(message.content as string, {
+                breaks: true,
+                gfm: true,
+              }),
             }}
           />
         ))}

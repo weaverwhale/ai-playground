@@ -2,22 +2,6 @@ import { z } from 'zod';
 import { load as cheerioLoad } from 'cheerio';
 import { Tool } from './Tool';
 
-const DEFAULT_HEADERS = {
-  Accept:
-    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-  'Accept-Encoding': 'gzip, deflate',
-  'Accept-Language': 'en-US,en;q=0.5',
-  'Alt-Used': 'LEAVE-THIS-KEY-SET-BY-TOOL',
-  Connection: 'keep-alive',
-  Referer: 'https://www.google.com/',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'cross-site',
-  'Upgrade-Insecure-Requests': '1',
-  'User-Agent':
-    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/111.0',
-};
-
 function createWebBrowser() {
   const paramsSchema = z.object({
     url: z.string().transform((url) => {
@@ -74,44 +58,23 @@ function createWebBrowser() {
     'useful for when you need to get live information from a webpage.';
 
   const execute = async ({ url }: z.infer<typeof paramsSchema>) => {
-    // Validate URL before proceeding
+    // Validate URL
+    let validUrl: URL;
     try {
-      const validUrl = new URL(url);
+      validUrl = new URL(url);
       if (!validUrl.protocol || !validUrl.hostname) {
-        return `Error: Invalid URL format. Please provide a complete URL with protocol and hostname.`;
+        return { finished: false };
       }
-    } catch (error) {
-      return `Error: Invalid URL - ${error instanceof Error ? error.message : 'unknown error'}`;
+    } catch {
+      return { finished: false };
     }
 
-    const corsProxy = 'https://corsproxy.io/?';
-    const proxiedUrl = corsProxy + url.replace(/`/g, '');
-
-    const config = {
-      headers: DEFAULT_HEADERS,
-    };
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url.replace(/`/g, ''))}`;
 
     try {
-      const htmlResponse = await fetch(proxiedUrl, config);
+      const htmlResponse = await fetch(proxyUrl);
       if (!htmlResponse.ok) {
-        throw new Error(`HTTP error! status: ${htmlResponse.status}`);
-      }
-
-      const allowedContentTypes = [
-        'text/html',
-        'application/json',
-        'application/xml',
-        'application/javascript',
-        'text/plain',
-      ];
-      const contentType = htmlResponse.headers.get('content-type');
-      const contentTypeArray = contentType?.split(';');
-      if (
-        contentTypeArray &&
-        contentTypeArray[0] &&
-        !allowedContentTypes.includes(contentTypeArray[0])
-      ) {
-        return `Error: Unsupported content type ${contentTypeArray[0]}`;
+        return { finished: false };
       }
 
       const html = await htmlResponse.text();
@@ -147,11 +110,8 @@ function createWebBrowser() {
         });
 
       return text.trim().replace(/\n+/g, ' ');
-    } catch (error) {
-      if (error instanceof Error) {
-        return `Error fetching webpage: ${error.message}`;
-      }
-      return 'An unknown error occurred while fetching the webpage';
+    } catch {
+      return { finished: false };
     }
   };
 

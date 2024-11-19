@@ -6,14 +6,14 @@ export type ToolFunction<TSchema extends z.ZodType> = {
   parameters: TSchema;
 };
 
-export class Tool<TSchema extends z.ZodType> {
-  public function: ToolFunction<TSchema>;
+export class Tool<TParams extends z.ZodType, TResponse> {
+  public function: ToolFunction<TParams>;
 
   constructor(
-    schema: TSchema,
-    name: string,
-    description: string,
-    public execute: (params: z.infer<TSchema>) => Promise<string>
+    public schema: TParams,
+    public name: string,
+    public description: string,
+    public execute: (params: z.infer<TParams>) => Promise<TResponse>
   ) {
     this.function = {
       name,
@@ -23,11 +23,11 @@ export class Tool<TSchema extends z.ZodType> {
   }
 }
 
-export function createTool<TSchema extends z.ZodType>(
-  schema: TSchema,
+export function createTool<TParams extends z.ZodType, TResponse>(
+  schema: TParams,
   name: string,
   description: string,
-  execute: (params: z.infer<TSchema>) => Promise<string>
-): Tool<TSchema> {
+  execute: (params: z.infer<TParams>) => Promise<TResponse>
+): Tool<TParams, TResponse> {
   return new Tool(schema, name, description, execute);
 }
