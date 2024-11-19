@@ -63,10 +63,10 @@ function createWebBrowser() {
     try {
       validUrl = new URL(url);
       if (!validUrl.protocol || !validUrl.hostname) {
-        return { finished: false };
+        return '';
       }
     } catch {
-      return { finished: false };
+      return '';
     }
 
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url.replace(/`/g, ''))}`;
@@ -74,7 +74,7 @@ function createWebBrowser() {
     try {
       const htmlResponse = await fetch(proxyUrl);
       if (!htmlResponse.ok) {
-        return { finished: false };
+        return '';
       }
 
       const html = await htmlResponse.text();
@@ -111,7 +111,7 @@ function createWebBrowser() {
 
       return text.trim().replace(/\n+/g, ' ');
     } catch {
-      return { finished: false };
+      return '';
     }
   };
 
