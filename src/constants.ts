@@ -9,12 +9,12 @@ export const models = [
     stream: true,
   },
   {
-    name: 'gpt-4o-2024-08-06',
+    name: 'gpt-4o',
     label: 'GPT-4o',
     stream: true,
   },
   {
-    name: 'o1-mini-2024-09-12',
+    name: 'o1-mini',
     label: 'o1 Mini',
     stream: false,
   },
