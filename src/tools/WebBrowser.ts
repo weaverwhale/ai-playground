@@ -70,15 +70,29 @@ function createWebBrowser() {
   });
 
   const name = 'web_browser';
-  const description = 'useful for when you need to get live information from a webpage.';
+  const description =
+    'useful for when you need to get live information from a webpage.';
 
   const execute = async ({ url }: z.infer<typeof paramsSchema>) => {
+    // Validate URL before proceeding
+    try {
+      const validUrl = new URL(url);
+      if (!validUrl.protocol || !validUrl.hostname) {
+        return `Error: Invalid URL format. Please provide a complete URL with protocol and hostname.`;
+      }
+    } catch (error) {
+      return `Error: Invalid URL - ${error instanceof Error ? error.message : 'unknown error'}`;
+    }
+
+    const corsProxy = 'https://corsproxy.io/?';
+    const proxiedUrl = corsProxy + url.replace(/`/g, '');
+
     const config = {
       headers: DEFAULT_HEADERS,
     };
 
     try {
-      const htmlResponse = await fetch(url, config);
+      const htmlResponse = await fetch(proxiedUrl, config);
       if (!htmlResponse.ok) {
         throw new Error(`HTTP error! status: ${htmlResponse.status}`);
       }
