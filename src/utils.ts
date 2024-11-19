@@ -32,7 +32,14 @@ export async function processToolUsage(content: string): Promise<string> {
         }
 
         const toolResult = await tool.execute(parsedParams);
-        processedContent = processedContent.replace(fullMatch, toolResult);
+        if (typeof toolResult === 'string') {
+          processedContent = processedContent.replace(fullMatch, toolResult);
+        } else {
+          processedContent = processedContent.replace(
+            fullMatch,
+            'Error: Unable to process webpage'
+          );
+        }
       } catch (error) {
         console.error(`Error executing tool ${toolName}:`, error);
         processedContent = processedContent.replace(
