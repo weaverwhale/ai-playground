@@ -102,59 +102,57 @@ function App() {
         const streamResponse = stream as Stream<ChatCompletionChunk>;
         let fullContent = '';
 
-        // First, collect the entire streamed response
+        // Stream the initial response normally
         for await (const chunk of streamResponse) {
           const content = chunk.choices[0]?.delta?.content || '';
           fullContent += content;
 
-          setMessages((prevMessages) => {
-            const newMessages = [...prevMessages];
-            newMessages[newMessages.length - 1].content = fullContent;
-            return newMessages;
-          });
-        }
-
-        // After stream is complete, process any tool usage
-        const processedContent = await processToolUsage(fullContent);
-
-        // If tool was used, generate summary
-        if (processedContent !== fullContent) {
-          setMessages((prevMessages) => {
-            const newMessages = [...prevMessages];
-            newMessages[newMessages.length - 1].content = processedContent;
-            return newMessages;
-          });
-
-          // Create a new stream for the summary
-          const summaryStream = await openai.chat.completions.create({
-            messages: [
-              {
-                role: 'system',
-                content: secondStreamPrompt,
-              },
-              {
-                role: 'user',
-                content: processedContent,
-              },
-            ],
-            model: model.name,
-            stream: true,
-          });
-
-          let summary = '\n\n---\n\n';
-
-          // Stream the summary
-          for await (const summaryChunk of summaryStream) {
-            const summaryContent =
-              summaryChunk.choices[0]?.delta?.content || '';
-            summary += summaryContent;
-
+          // Only update the message if we have content
+          if (content) {
             setMessages((prevMessages) => {
               const newMessages = [...prevMessages];
-              newMessages[newMessages.length - 1].content =
-                processedContent + summary;
+              newMessages[newMessages.length - 1].content = fullContent;
               return newMessages;
             });
+          }
+
+          // Check if this is the final chunk
+          if (chunk.choices[0]?.finish_reason === 'stop') {
+            // Process any tool usage
+            const processedContent = await processToolUsage(fullContent);
+
+            // Only create summary if a tool was actually used
+            if (processedContent !== fullContent) {
+              const summaryStream = await openai.chat.completions.create({
+                messages: [
+                  {
+                    role: 'system',
+                    content: secondStreamPrompt,
+                  },
+                  {
+                    role: 'user',
+                    content: processedContent,
+                  },
+                ],
+                model: model.name,
+                stream: true,
+              });
+
+              let summary = '';
+
+              // Stream the summary, replacing the previous content
+              for await (const summaryChunk of summaryStream) {
+                const summaryContent =
+                  summaryChunk.choices[0]?.delta?.content || '';
+                summary += summaryContent;
+
+                setMessages((prevMessages) => {
+                  const newMessages = [...prevMessages];
+                  newMessages[newMessages.length - 1].content = summary;
+                  return newMessages;
+                });
+              }
+            }
           }
         }
       } else {
