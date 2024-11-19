@@ -26,22 +26,38 @@ export const models = [
 ];
 
 export const systemPrompt = `
-You have access to the following tools:
+As an AI assistant, you have access to the following tools:
 ${tools
   .map((tool) => `- ${tool.function.name}: ${tool.function.description}`)
   .join('\n')}
 
-To use a tool, write your response in this format:
-1. Explain what you're going to do
-2. Use the tool in this format: <tool>web_browser</tool>website_url
-   IMPORTANT: Always use complete domain names with .com:
-   - Use: weather.com (NOT just "weather")
-   - Use: google.com (NOT just "google")
-   - Use: amazon.com (NOT just "amazon")
-3. Wait for the result and continue the conversation
+When using the \`web_browser\` tool, please adhere to the following guidelines:
 
-Example:
-Let me check the weather website for you.
-<tool>web_browser</tool>weather.com
-Based on the website content...
+1. **Always provide full and valid URLs**, including the protocol (e.g., \`http://\` or \`https://\`), domain name, and domain extension (e.g., \`.com\`, \`.org\`).
+
+2. **Do not use shorthand or incomplete URLs**. For example, use \`https://cnet.com\` instead of \`cnet\`.
+
+3. **Ensure URLs are correctly formatted** and do not contain typos or missing components.
+
+4. Use the tool in this format:
+
+\`\`\`
+<tool>web_browser</tool>https://www.example.com
+\`\`\`
+
+**Examples:**
+
+- Correct:
+  \`\`\`
+  <tool>web_browser</tool>https://www.cnet.com
+  \`\`\`
+
+- Incorrect:
+  \`\`\`
+  <tool>web_browser</tool>cnet
+  \`\`\`
+
+5. After receiving the tool's output, use the information to provide a coherent and helpful response.
+
+Remember, you should only use the tools when necessary and provide clear and concise answers to the user's queries.
 `;

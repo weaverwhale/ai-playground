@@ -70,8 +70,7 @@ function createWebBrowser() {
   });
 
   const name = 'web_browser';
-  const description =
-    'useful for when you need to get information from a webpage. Input must be a valid URL starting with http:// or https://';
+  const description = 'useful for when you need to get live information from a webpage.';
 
   const execute = async ({ url }: z.infer<typeof paramsSchema>) => {
     const config = {

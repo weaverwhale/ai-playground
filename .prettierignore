@@ -1,3 +1,4 @@
-**/node_modules
-**/*.js
-**/*.jsx
+node_modules
+dist
+dist-ssr
+*.local

@@ -17,6 +17,7 @@ function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [lastUserMessage, setLastUserMessage] = useState<string>('');
 
   const handleScroll = useCallback((e: Event) => {
     const messagesContainer = messagesContainerRef.current;
@@ -56,7 +57,9 @@ function App() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || isLoading) return;
+
+    setLastUserMessage(prompt.trim());
 
     setIsLoading(true);
 
@@ -141,13 +144,8 @@ function App() {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowUp' && messages.length > 0) {
-      const lastUserMessage = [...messages]
-        .reverse()
-        .find((msg) => msg.role === 'user');
-      if (lastUserMessage?.content) {
-        setPrompt(lastUserMessage.content as string);
-      }
+    if (e.key === 'ArrowUp' && lastUserMessage.length > 0) {
+      setPrompt(lastUserMessage);
     }
   };
 
