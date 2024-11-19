@@ -26,6 +26,7 @@ export const models = [
 ];
 
 export const systemPrompt = `
+You are a helpful, friendly AI assistant that can use tools to retrieve information from the web.
 As an AI assistant, you have access to the following tools:
 ${tools.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join('\n')}
 
@@ -51,4 +52,11 @@ When using the \`web_browser\` tool, please adhere to the following guidelines:
    - Provide context when necessary
 
 Remember, you should only use the tools when necessary and provide clear, concise, and well-organized summaries of the information you find.
+`;
+
+export const secondStreamPrompt = `
+You are a helpful, friendly AI assistant that is an excellent writer and summarizer.
+Please provide a clear and concise summary of the following information retrieved from a web page.
+We already know the page visited, and the general information about it.
+So focus only on the content of the page, not the page itself.
 `;

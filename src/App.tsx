@@ -5,7 +5,7 @@ import { Stream } from 'openai/streaming.mjs';
 import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
-import { models, systemPrompt } from './constants';
+import { models, systemPrompt, secondStreamPrompt } from './constants';
 import { processToolUsage } from './utils';
 import './App.css';
 
@@ -102,18 +102,60 @@ function App() {
         const streamResponse = stream as Stream<ChatCompletionChunk>;
         let fullContent = '';
 
+        // First, collect the entire streamed response
         for await (const chunk of streamResponse) {
           const content = chunk.choices[0]?.delta?.content || '';
           fullContent += content;
 
-          // Process any complete tool usage
-          const processedContent = await processToolUsage(fullContent);
+          setMessages((prevMessages) => {
+            const newMessages = [...prevMessages];
+            newMessages[newMessages.length - 1].content = fullContent;
+            return newMessages;
+          });
+        }
 
+        // After stream is complete, process any tool usage
+        const processedContent = await processToolUsage(fullContent);
+
+        // If tool was used, generate summary
+        if (processedContent !== fullContent) {
           setMessages((prevMessages) => {
             const newMessages = [...prevMessages];
             newMessages[newMessages.length - 1].content = processedContent;
             return newMessages;
           });
+
+          // Create a new stream for the summary
+          const summaryStream = await openai.chat.completions.create({
+            messages: [
+              {
+                role: 'system',
+                content: secondStreamPrompt,
+              },
+              {
+                role: 'user',
+                content: processedContent,
+              },
+            ],
+            model: model.name,
+            stream: true,
+          });
+
+          let summary = '\n\n---\n\n';
+
+          // Stream the summary
+          for await (const summaryChunk of summaryStream) {
+            const summaryContent =
+              summaryChunk.choices[0]?.delta?.content || '';
+            summary += summaryContent;
+
+            setMessages((prevMessages) => {
+              const newMessages = [...prevMessages];
+              newMessages[newMessages.length - 1].content =
+                processedContent + summary;
+              return newMessages;
+            });
+          }
         }
       } else {
         const response = stream as OpenAI.Chat.ChatCompletion;
