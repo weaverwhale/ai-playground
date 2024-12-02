@@ -1,4 +1,4 @@
-import { tools } from './constants';
+import { rawTools } from './tools';
 
 export async function processToolUsage(content: string): Promise<string> {
   let processedContent = content;
@@ -7,7 +7,7 @@ export async function processToolUsage(content: string): Promise<string> {
   let match;
   while ((match = toolRegex.exec(content)) !== null) {
     const [fullMatch, toolName, params] = match;
-    const tool = tools.find((t) => t.function.name === toolName);
+    const tool = rawTools.find((t) => t.name === toolName);
 
     if (tool) {
       try {
@@ -17,6 +17,8 @@ export async function processToolUsage(content: string): Promise<string> {
           parsedParams = { url: params.trim() };
         } else if (toolName === 'wikipedia') {
           parsedParams = { query: params.trim() };
+        } else if (toolName === 'timezone') {
+          parsedParams = { location: params.trim() };
         } else {
           try {
             parsedParams = JSON.parse(params);

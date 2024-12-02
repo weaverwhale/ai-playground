@@ -10,7 +10,7 @@ import { createImageGenerator } from './ImageGenerator';
 // import { createTranslator } from './Translator';
 // import { createNewsSearch } from './NewsSearch';
 
-const tools: ChatCompletionTool[] = [
+const rawTools = [
   createWebBrowser(),
   createWikipedia(),
   createCalculator(),
@@ -19,7 +19,9 @@ const tools: ChatCompletionTool[] = [
   // createWeather(),
   // createTranslator(),
   // createNewsSearch(),
-].map((tool) => ({
+];
+
+const tools: ChatCompletionTool[] = rawTools.map((tool) => ({
   type: 'function' as const,
   function: {
     name: tool.name,
@@ -28,4 +30,4 @@ const tools: ChatCompletionTool[] = [
   },
 }));
 
-export { tools };
+export { rawTools, tools };
