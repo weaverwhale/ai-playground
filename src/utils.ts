@@ -1,4 +1,3 @@
-import * as z from 'zod';
 import { tools } from './constants';
 
 export async function processToolUsage(content: string): Promise<string> {
@@ -12,19 +11,15 @@ export async function processToolUsage(content: string): Promise<string> {
 
     if (tool) {
       try {
-        const parameters = params.trim();
-        let parsedParams: z.infer<typeof tool.function.parameters>;
+        let parsedParams;
 
         if (toolName === 'web_browser') {
-          parsedParams = { url: parameters };
+          parsedParams = { url: params.trim() };
+        } else if (toolName === 'wikipedia') {
+          parsedParams = { query: params.trim() };
         } else {
           try {
-            if (parameters.startsWith('{')) {
-              const jsonParams = JSON.parse(parameters);
-              parsedParams = tool.function.parameters.parse(jsonParams);
-            } else {
-              throw new Error('Invalid parameter format');
-            }
+            parsedParams = JSON.parse(params);
           } catch (e) {
             console.warn(`Failed to parse parameters for ${toolName}:`, e);
             throw e;
@@ -37,7 +32,7 @@ export async function processToolUsage(content: string): Promise<string> {
         } else {
           processedContent = processedContent.replace(
             fullMatch,
-            'Error: Unable to process webpage'
+            'Error: Unable to process tool response'
           );
         }
       } catch (error) {

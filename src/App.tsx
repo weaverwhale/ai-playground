@@ -143,7 +143,16 @@ function App() {
           ) {
             try {
               const args = JSON.parse(currentToolCall.arguments);
-              const toolCallContent = `<tool>${currentToolCall.name}</tool>${args.url}`;
+              let toolCallContent;
+
+              if (currentToolCall.name === 'web_browser') {
+                toolCallContent = `<tool>${currentToolCall.name}</tool>${args.url}`;
+              } else if (currentToolCall.name === 'wikipedia') {
+                toolCallContent = `<tool>${currentToolCall.name}</tool>${args.query}`;
+              } else {
+                toolCallContent = `<tool>${currentToolCall.name}</tool>${JSON.stringify(args)}`;
+              }
+
               const processedContent = await processToolUsage(toolCallContent);
 
               if (processedContent !== toolCallContent) {
