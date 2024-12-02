@@ -1,4 +1,4 @@
-## OpenAI O-Models Playground
+# OpenAI O-Models Playground
 
 - [o1-preview](https://platform.openai.com/docs/models/o1-preview)
 - [o1-mini](https://platform.openai.com/docs/models/o1-mini)
