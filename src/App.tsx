@@ -7,6 +7,7 @@ import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 import { models, systemPrompt, secondStreamPrompt } from './constants';
 import { processToolUsage } from './utils';
+import { tools } from './tools';
 import './App.css';
 
 function App() {
@@ -96,19 +97,38 @@ function App() {
         ] as ChatCompletionMessageParam[],
         model: model.name,
         stream: model.stream,
+        tools,
+        tool_choice: 'auto',
       });
 
       if (model.stream) {
         const streamResponse = stream as Stream<ChatCompletionChunk>;
         let fullContent = '';
+        let toolCallInProgress = false;
+        const currentToolCall = {
+          name: '',
+          arguments: '',
+        };
 
         // Stream the initial response normally
         for await (const chunk of streamResponse) {
-          const content = chunk.choices[0]?.delta?.content || '';
-          fullContent += content;
+          // Handle tool calls
+          if (chunk.choices[0]?.delta?.tool_calls) {
+            toolCallInProgress = true;
+            const toolCall = chunk.choices[0].delta.tool_calls[0];
 
-          // Only update the message if we have content
+            if (toolCall.function?.name) {
+              currentToolCall.name = toolCall.function.name;
+            }
+            if (toolCall.function?.arguments) {
+              currentToolCall.arguments += toolCall.function.arguments;
+            }
+          }
+
+          // Handle regular content
+          const content = chunk.choices[0]?.delta?.content || '';
           if (content) {
+            fullContent += content;
             setMessages((prevMessages) => {
               const newMessages = [...prevMessages];
               newMessages[newMessages.length - 1].content = fullContent;
@@ -116,42 +136,60 @@ function App() {
             });
           }
 
-          // Check if this is the final chunk
-          if (chunk.choices[0]?.finish_reason === 'stop') {
-            // Process any tool usage
-            const processedContent = await processToolUsage(fullContent);
+          // Handle tool call completion
+          if (
+            chunk.choices[0]?.finish_reason === 'tool_calls' &&
+            toolCallInProgress
+          ) {
+            try {
+              const args = JSON.parse(currentToolCall.arguments);
+              const toolCallContent = `<tool>${currentToolCall.name}</tool>${args.url}`;
+              const processedContent = await processToolUsage(toolCallContent);
 
-            // Only create summary if a tool was actually used
-            if (processedContent !== fullContent) {
-              const summaryStream = await openai.chat.completions.create({
-                messages: [
-                  {
-                    role: 'system',
-                    content: secondStreamPrompt,
-                  },
-                  {
-                    role: 'user',
-                    content: processedContent,
-                  },
-                ],
-                model: model.name,
-                stream: true,
-              });
+              if (processedContent !== toolCallContent) {
+                const summaryStream = await openai.chat.completions.create({
+                  messages: [
+                    {
+                      role: 'system',
+                      content: secondStreamPrompt,
+                    },
+                    {
+                      role: 'user',
+                      content: processedContent,
+                    },
+                  ],
+                  model: model.name,
+                  stream: true,
+                });
 
-              let summary = '';
+                let summary = '';
+                for await (const summaryChunk of summaryStream) {
+                  const summaryContent =
+                    summaryChunk.choices[0]?.delta?.content || '';
+                  summary += summaryContent;
 
-              // Stream the summary, replacing the previous content
-              for await (const summaryChunk of summaryStream) {
-                const summaryContent =
-                  summaryChunk.choices[0]?.delta?.content || '';
-                summary += summaryContent;
-
+                  setMessages((prevMessages) => {
+                    const newMessages = [...prevMessages];
+                    newMessages[newMessages.length - 1].content = summary;
+                    return newMessages;
+                  });
+                }
+              } else {
                 setMessages((prevMessages) => {
                   const newMessages = [...prevMessages];
-                  newMessages[newMessages.length - 1].content = summary;
+                  newMessages[newMessages.length - 1].content =
+                    processedContent;
                   return newMessages;
                 });
               }
+            } catch (error) {
+              console.error('Error processing tool call:', error);
+              setMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[newMessages.length - 1].content =
+                  'Error processing tool response';
+                return newMessages;
+              });
             }
           }
         }
