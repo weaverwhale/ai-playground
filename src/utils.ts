@@ -1,4 +1,6 @@
 import { rawTools } from './tools';
+import { Tool } from './tools/Tool';
+import * as z from 'zod';
 
 export async function processToolUsage(content: string): Promise<string> {
   let processedContent = content;
@@ -11,24 +13,17 @@ export async function processToolUsage(content: string): Promise<string> {
 
     if (tool) {
       try {
-        let parsedParams;
+        type ToolInput = z.infer<typeof tool.schema>;
+        const parsedParams = parseToolParameters(
+          tool as Tool<typeof tool.schema, string | { finished: boolean }>,
+          params
+        );
+        const toolResult = await (
+          tool.execute as (
+            params: ToolInput
+          ) => Promise<string | { finished: boolean }>
+        )(parsedParams);
 
-        if (toolName === 'web_browser') {
-          parsedParams = { url: params.trim() };
-        } else if (toolName === 'wikipedia') {
-          parsedParams = { query: params.trim() };
-        } else if (toolName === 'timezone') {
-          parsedParams = { location: params.trim() };
-        } else {
-          try {
-            parsedParams = JSON.parse(params);
-          } catch (e) {
-            console.warn(`Failed to parse parameters for ${toolName}:`, e);
-            throw e;
-          }
-        }
-
-        const toolResult = await tool.execute(parsedParams);
         if (typeof toolResult === 'string') {
           processedContent = processedContent.replace(fullMatch, toolResult);
         } else {
@@ -48,4 +43,23 @@ export async function processToolUsage(content: string): Promise<string> {
   }
 
   return processedContent;
+}
+
+function parseToolParameters<
+  TParams extends z.ZodObject<z.ZodRawShape>,
+  TResult,
+>(tool: Tool<TParams, TResult>, params: string): z.infer<TParams> {
+  const schemaFields = Object.keys(tool.schema.shape);
+
+  if (schemaFields.length === 1) {
+    const [paramKey] = schemaFields;
+    return { [paramKey]: params.trim() } as z.infer<TParams>;
+  }
+
+  try {
+    return JSON.parse(params) as z.infer<TParams>;
+  } catch (e) {
+    console.warn(`Failed to parse parameters for ${tool.name}:`, e);
+    throw e;
+  }
 }
