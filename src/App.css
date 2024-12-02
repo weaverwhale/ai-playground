@@ -29,6 +29,12 @@
   align-self: flex-start;
 }
 
+.message img {
+  display: block;
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+
 .input-form {
   width: 100%;
   display: flex;

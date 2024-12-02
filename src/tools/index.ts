@@ -4,7 +4,6 @@ import { ChatCompletionTool } from 'openai/resources/chat/completions';
 import { createWebBrowser } from './WebBrowser';
 import { createWikipedia } from './Wikipedia';
 import { createCalculator } from './Calculator';
-import { createTimeZone } from './TimeZone';
 import { createImageGenerator } from './ImageGenerator';
 // import { createWeather } from './Weather';
 // import { createTranslator } from './Translator';
@@ -14,7 +13,6 @@ const rawTools = [
   createWebBrowser(),
   createWikipedia(),
   createCalculator(),
-  createTimeZone(),
   createImageGenerator(),
   // createWeather(),
   // createTranslator(),

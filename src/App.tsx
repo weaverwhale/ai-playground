@@ -155,7 +155,10 @@ function App() {
 
               const processedContent = await processToolUsage(toolCallContent);
 
-              if (processedContent !== toolCallContent) {
+              if (
+                processedContent !== toolCallContent &&
+                currentToolCall.name !== 'image_generator'
+              ) {
                 const summaryStream = await openai.chat.completions.create({
                   messages: [
                     {
