@@ -62,18 +62,22 @@ interface GitHubCommitFile {
 
 function parseGitHubUrl(url: string) {
   const prMatch = url.match(
-    /https:\/\/github\.com\/([^/]+)\/([^/]+)\/(pull|commit)\/([^/]+)/
+    /https:\/\/github\.com\/([^/]+)\/([^/]+)\/(pull|commit)\/([a-fA-F0-9]+)/
   );
   if (!prMatch) {
     throw new Error(
       'Invalid GitHub URL. Must be a Pull Request or Commit URL.'
     );
   }
+
+  // Clean the identifier to ensure it's just the SHA/PR number
+  const identifier = prMatch[4].replace(/[^a-fA-F0-9]/g, '');
+
   return {
     owner: prMatch[1],
     repo: prMatch[2],
     type: prMatch[3] as 'pull' | 'commit',
-    identifier: prMatch[4],
+    identifier: identifier,
   };
 }
 
@@ -81,7 +85,7 @@ async function makeGitHubRequest(url: string, token: string) {
   const response = await fetch(url, {
     headers: {
       Accept: 'application/vnd.github.v3+json',
-      ...(token && { Authorization: `token ${token}` }),
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
   });
 
@@ -97,6 +101,9 @@ async function makeGitHubRequest(url: string, token: string) {
 
   if (!response.ok) {
     const error: GitHubErrorResponse = await response.json();
+    if (response.status === 404) {
+      throw new Error(`Resource not found: ${error.message}`);
+    }
     throw new Error(`GitHub API error: ${error.message}`);
   }
 
@@ -167,16 +174,27 @@ function createGitHubReview() {
           const d = formatPRDetails(prDetails, prFiles, prComments);
           return d;
         } else {
-          // Fetch Commit details with files
-          const commitResponse = await makeGitHubRequest(
+          // Fetch Commit details
+          const commitDetails: GitHubCommitDetail = await makeGitHubRequest(
             `https://api.github.com/repos/${owner}/${repo}/commits/${identifier}`,
             GITHUB_TOKEN
           );
 
-          return formatCommitDetails(commitResponse);
+          // Ensure the response matches our expected interface
+          if (!commitDetails.sha || !commitDetails.commit) {
+            throw new Error('Invalid commit response format');
+          }
+
+          return formatCommitDetails(commitDetails);
         }
       } catch (error) {
-        return `Error reviewing GitHub ${type}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        if (error instanceof Error) {
+          if (error.message.includes('Resource not found')) {
+            return `The specified ${type} could not be found. Please verify the URL and ensure you have access to the repository.`;
+          }
+          return `Error reviewing GitHub ${type}: ${error.message}`;
+        }
+        return `Error reviewing GitHub ${type}: Unknown error`;
       }
     }
   );
