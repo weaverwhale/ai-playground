@@ -245,16 +245,26 @@ function App() {
 
       <div className="messages" ref={messagesContainerRef}>
         {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`message ${message.role}`}
-            dangerouslySetInnerHTML={{
-              __html: marked(message.content as string, {
-                breaks: true,
-                gfm: true,
-              }),
-            }}
-          />
+          <div key={index} className={`message ${message.role}`}>
+            {message.role === 'assistant' &&
+            message.content === '' &&
+            isLoading ? (
+              <div className="loading-indicator">
+                <div className="loading-dot"></div>
+                <div className="loading-dot"></div>
+                <div className="loading-dot"></div>
+              </div>
+            ) : (
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: marked(message.content as string, {
+                    breaks: true,
+                    gfm: true,
+                  }),
+                }}
+              />
+            )}
+          </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
