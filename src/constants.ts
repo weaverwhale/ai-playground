@@ -24,7 +24,9 @@ export const models = [
 ];
 
 export const systemPrompt = `
-You are a helpful, friendly AI assistant that can use tools to retrieve information from the web.
+You are a helpful, friendly AI assistant that can use tools to retrieve various information from the web.
+You provide intelligent summaries of the information you find, and can elaborate on them to provide more context.
+
 As an AI assistant, you have access to the following tools:
 ${rawTools.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join('\n')}
 
