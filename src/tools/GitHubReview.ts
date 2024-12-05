@@ -135,6 +135,45 @@ async function fetchAllPages<T>(baseUrl: string, token: string): Promise<T[]> {
   return allItems;
 }
 
+async function fetchPRMergeStatus(
+  owner: string,
+  repo: string,
+  prNumber: string,
+  token: string
+) {
+  const prDetails = await makeGitHubRequest(
+    `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`,
+    token
+  );
+  return prDetails.mergeable ? 'Mergeable' : 'Has conflicts';
+}
+
+async function fetchPRLabels(
+  owner: string,
+  repo: string,
+  prNumber: string,
+  token: string
+) {
+  const labels = await makeGitHubRequest(
+    `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/labels`,
+    token
+  );
+  return labels.map((label: { name: string }) => label.name).join(', ');
+}
+
+async function fetchCommitStatus(
+  owner: string,
+  repo: string,
+  sha: string,
+  token: string
+) {
+  const status = await makeGitHubRequest(
+    `https://api.github.com/repos/${owner}/${repo}/commits/${sha}/status`,
+    token
+  );
+  return status.state; // e.g., 'success', 'failure', 'pending'
+}
+
 function createGitHubReview() {
   const paramsSchema = z.object({
     url: z.string().describe('GitHub Pull Request or Commit URL to review'),
@@ -171,12 +210,31 @@ function createGitHubReview() {
             ),
           ]);
 
+          const mergeStatus = await fetchPRMergeStatus(
+            owner,
+            repo,
+            identifier,
+            GITHUB_TOKEN
+          );
+          const labels = await fetchPRLabels(
+            owner,
+            repo,
+            identifier,
+            GITHUB_TOKEN
+          );
+
           const d = formatPRDetails(prDetails, prFiles, prComments);
-          return d;
+          return `${d}\n\nMerge Status: ${mergeStatus}\nLabels: ${labels}`;
         } else {
           // Fetch Commit details
           const commitDetails: GitHubCommitDetail = await makeGitHubRequest(
             `https://api.github.com/repos/${owner}/${repo}/commits/${identifier}`,
+            GITHUB_TOKEN
+          );
+          const commitStatus = await fetchCommitStatus(
+            owner,
+            repo,
+            identifier,
             GITHUB_TOKEN
           );
 
@@ -185,7 +243,7 @@ function createGitHubReview() {
             throw new Error('Invalid commit response format');
           }
 
-          return formatCommitDetails(commitDetails);
+          return `${formatCommitDetails(commitDetails)}\n\nCI Status: ${commitStatus}`;
         }
       } catch (error) {
         if (error instanceof Error) {
