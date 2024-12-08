@@ -53,7 +53,19 @@ function parseToolParameters<
 
   if (schemaFields.length === 1) {
     const [paramKey] = schemaFields;
-    return { [paramKey]: params.trim() } as z.infer<TParams>;
+    // Try to parse as JSON first in case it's a complex parameter
+    try {
+      const parsed = JSON.parse(params);
+      // If it's already in the correct format, return it
+      if (parsed[paramKey]) {
+        return parsed as z.infer<TParams>;
+      }
+      // Otherwise, wrap the parsed value
+      return { [paramKey]: parsed } as z.infer<TParams>;
+    } catch {
+      // If it's not JSON, just use the raw string
+      return { [paramKey]: params.trim() } as z.infer<TParams>;
+    }
   }
 
   try {
