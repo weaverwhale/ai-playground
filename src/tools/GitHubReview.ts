@@ -184,6 +184,7 @@ function createGitHubReview() {
     'github_review',
     'Useful for reviewing GitHub Pull Requests or Commits and providing detailed analysis',
     async ({ url }) => {
+      console.log('Reviewing GitHub URL:', url);
       const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
       if (!GITHUB_TOKEN) {
         throw new Error(

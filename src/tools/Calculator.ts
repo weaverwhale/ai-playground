@@ -11,6 +11,7 @@ function createCalculator() {
     'calculator',
     'Useful for performing mathematical calculations',
     async ({ expression }) => {
+      console.log('Calculating:', expression);
       try {
         // Using Function constructor for safe evaluation
         const sanitizedExpression = expression.replace(/[^0-9+\-*/().]/g, '');

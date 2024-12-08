@@ -23,6 +23,8 @@ function createWebBrowser() {
       return { finished: false };
     }
 
+    console.log('Browsing URL:', url);
+
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url.replace(/`/g, ''))}`;
 
     try {

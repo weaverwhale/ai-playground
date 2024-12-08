@@ -13,7 +13,7 @@ function createUrbanDictionary() {
 
   const execute = async ({ term }: z.infer<typeof paramsSchema>) => {
     console.log('Searching for term:', term);
-    const url = `http://www.urbandictionary.com/define.php?term=${term}`;
+    const url = `http://www.urbandictionary.com/define.php?term=${encodeURIComponent(term)}`;
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 
     try {

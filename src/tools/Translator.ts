@@ -14,6 +14,7 @@ function createTranslator() {
     'translator',
     'Useful for translating text between different languages',
     async ({ text, targetLanguage }) => {
+      console.log('Translating text:', text, 'to', targetLanguage);
       const API_KEY = import.meta.env.VITE_GOOGLE_TRANSLATE_API_KEY;
       const url = `https://translation.googleapis.com/language/translate/v2?key=${API_KEY}`;
 

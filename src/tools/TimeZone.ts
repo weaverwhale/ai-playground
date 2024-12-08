@@ -13,6 +13,7 @@ function createTimeZone() {
     'timezone',
     'Useful for getting current time and timezone information for a location',
     async ({ location }) => {
+      console.log('Getting timezone for:', location);
       try {
         const response = await fetch(
           `http://worldtimeapi.org/api/timezone/${location}`

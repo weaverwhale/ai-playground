@@ -13,6 +13,7 @@ function createImageGenerator() {
     'image_generator',
     'Useful for generating images based on text descriptions using DALL-E or similar services',
     async ({ prompt, size }) => {
+      console.log('Generating image for:', prompt, 'with size', size);
       const openai = new OpenAI({
         apiKey: import.meta.env.VITE_OPENAI_API_KEY,
         dangerouslyAllowBrowser: true,

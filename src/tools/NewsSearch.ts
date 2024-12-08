@@ -12,6 +12,7 @@ function createNewsSearch() {
     'news_search',
     'Useful for finding recent news articles on specific topics',
     async ({ query, days }) => {
+      console.log('Searching news for:', query, 'over the last', days, 'days');
       const API_KEY = import.meta.env.VITE_NEWS_API_KEY;
       const date = new Date();
       date.setDate(date.getDate() - days);

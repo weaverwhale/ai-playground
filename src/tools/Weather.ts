@@ -11,6 +11,7 @@ function createWeather() {
     'weather',
     'Useful for getting current weather information for a location',
     async ({ location }) => {
+      console.log('Getting weather for:', location);
       const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
       const url = `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${API_KEY}&units=metric`;
 

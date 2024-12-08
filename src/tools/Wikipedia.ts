@@ -11,6 +11,7 @@ function createWikipedia() {
     'wikipedia',
     'Useful for getting quick summaries from Wikipedia',
     async ({ query }) => {
+      console.log('Searching Wikipedia for:', query);
       try {
         const encodedQuery = encodeURIComponent(query.replace(/ /g, '_'));
         const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedQuery}`;
