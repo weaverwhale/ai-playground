@@ -6,6 +6,7 @@ import { createWikipedia } from './Wikipedia';
 import { createCalculator } from './Calculator';
 import { createImageGenerator } from './ImageGenerator';
 import { createGitHubReview } from './GitHubReview';
+import { createUrbanDictionary } from './UrbanDictionary';
 // import { createWeather } from './Weather';
 // import { createTranslator } from './Translator';
 // import { createNewsSearch } from './NewsSearch';
@@ -16,6 +17,7 @@ const rawTools = [
   createCalculator(),
   createImageGenerator(),
   createGitHubReview(),
+  createUrbanDictionary(),
   // createWeather(),
   // createTranslator(),
   // createNewsSearch(),

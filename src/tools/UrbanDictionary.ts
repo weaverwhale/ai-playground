@@ -2,28 +2,19 @@ import { z } from 'zod';
 import { load as cheerioLoad } from 'cheerio';
 import { Tool } from './Tool';
 
-function createWebBrowser() {
+function createUrbanDictionary() {
   const paramsSchema = z.object({
-    url: z.string().describe('The URL to browse'),
+    term: z.string().describe('The term to look up'),
   });
 
-  const name = 'web_browser';
+  const name = 'urban_dictionary';
   const description =
-    'useful for when you need to get live information from a webpage.';
+    'useful for looking up slang definitions and internet culture terms';
 
-  const execute = async ({ url }: z.infer<typeof paramsSchema>) => {
-    // Validate URL
-    let validUrl: URL;
-    try {
-      validUrl = new URL(url);
-      if (!validUrl.protocol || !validUrl.hostname) {
-        return { finished: false };
-      }
-    } catch {
-      return { finished: false };
-    }
-
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url.replace(/`/g, ''))}`;
+  const execute = async ({ term }: z.infer<typeof paramsSchema>) => {
+    console.log('Searching for term:', term);
+    const url = `http://www.urbandictionary.com/define.php?term=${term}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 
     try {
       const htmlResponse = await fetch(proxyUrl);
@@ -72,4 +63,4 @@ function createWebBrowser() {
   return new Tool(paramsSchema, name, description, execute);
 }
 
-export { createWebBrowser };
+export { createUrbanDictionary };

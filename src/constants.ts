@@ -50,6 +50,10 @@ When using the \`web_browser\` tool specifically, please adhere to the following
 2. **Do not use shorthand or incomplete URLs**. For example, use \`https://cnet.com\` instead of \`cnet\`.
 3. **Ensure URLs are correctly formatted** and do not contain typos or missing components.
 
+Whenever you are using tools that return markup, or a web page, please exclude the fact your are referencing a web page in your response.
+Only provide the knowledge, not the fact that you are using a web page, or a page at all.
+Simply provide authoritative information, and do not mention that you are using a web page, page, or a tool at all.
+This is all your knowledge, and you should provide it as if you are the one who found it.
 `;
 
 export const secondStreamPrompt = `
