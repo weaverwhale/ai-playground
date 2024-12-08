@@ -4,21 +4,69 @@ import { OpenAI } from 'openai';
 import { Stream } from 'openai/streaming.mjs';
 import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { ImageUpload } from './components/ImageUpload';
 
 import { models, systemPrompt, secondStreamPrompt } from './constants';
 import { processToolUsage } from './utils';
 import { tools } from './tools';
 import './App.css';
 
+type ExtendedChatCompletionMessageParam = Omit<
+  ChatCompletionMessageParam,
+  'content'
+> & {
+  content:
+    | string
+    | Array<{
+        type: 'text' | 'image_url';
+        text?: string;
+        image_url?: { url: string };
+      }>;
+};
+
+type ContentPart = {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: { url: string };
+};
+
+const renderMessage = (message: ExtendedChatCompletionMessageParam) => {
+  if (!message.content) return '';
+
+  if (typeof message.content === 'string') {
+    return marked(message.content, { breaks: true, gfm: true });
+  }
+
+  if (Array.isArray(message.content)) {
+    return (message.content as ContentPart[])
+      .map((content) => {
+        if (content.type === 'text') {
+          return marked(content.text || '', { breaks: true, gfm: true });
+        }
+        if (content.type === 'image_url') {
+          return `<img src="${content.image_url!.url}" alt="Uploaded content" />`;
+        }
+        return '';
+      })
+      .join('');
+  }
+
+  return '';
+};
+
 function App() {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState('');
-  const [messages, setMessages] = useState<ChatCompletionMessageParam[]>([]);
+  const [messages, setMessages] = useState<
+    ExtendedChatCompletionMessageParam[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [model, setModel] = useState(models[0]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
 
   const handleScroll = useCallback((e: Event) => {
     const messagesContainer = messagesContainerRef.current;
@@ -56,22 +104,45 @@ function App() {
     dangerouslyAllowBrowser: true,
   });
 
+  const handleImageUpload = (base64Image: string) => {
+    setCurrentImage(base64Image);
+    // focus the input
+    inputRef.current?.focus();
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!prompt.trim() || isLoading) return;
+    if ((!prompt.trim() && !currentImage) || isLoading) return;
 
     setLastUserMessage(prompt.trim());
-
     setIsLoading(true);
 
-    const userMessage: ChatCompletionMessageParam = {
+    const userMessage: ExtendedChatCompletionMessageParam = {
       role: 'user',
-      content: prompt,
+      content: [
+        {
+          type: 'text',
+          text: prompt,
+        },
+        ...(currentImage
+          ? [
+              {
+                type: 'image_url' as const,
+                image_url: {
+                  url: currentImage,
+                },
+              },
+            ]
+          : []),
+      ],
     };
+
     setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setPrompt('');
+    setCurrentImage(null);
 
     try {
-      const assistantMessage: ChatCompletionMessageParam = {
+      const assistantMessage: ExtendedChatCompletionMessageParam = {
         role: 'assistant',
         content: '',
       };
@@ -218,8 +289,6 @@ function App() {
           return newMessages;
         });
       }
-
-      setPrompt('');
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -227,15 +296,25 @@ function App() {
     }
   }
 
-  function handleClear() {
+  const handleClear = () => {
     if (isLoading) return;
     setMessages([]);
     setPrompt('');
-  }
+    setCurrentImage(null);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowUp' && lastUserMessage.length > 0) {
       setPrompt(lastUserMessage);
+    }
+    if (
+      e.key === 'Enter' &&
+      !e.shiftKey &&
+      !isLoading &&
+      prompt.trim().length > 0
+    ) {
+      e.preventDefault();
+      handleSubmit(e);
     }
   };
 
@@ -257,10 +336,7 @@ function App() {
             ) : (
               <div
                 dangerouslySetInnerHTML={{
-                  __html: marked(message.content as string, {
-                    breaks: true,
-                    gfm: true,
-                  }),
+                  __html: renderMessage(message),
                 }}
               />
             )}
@@ -275,15 +351,28 @@ function App() {
             Clear conversation
           </div>
         )}
-        <input
-          value={prompt}
-          onChange={(e) => {
-            setPrompt(e.target.value);
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder="Enter your prompt..."
-          disabled={isLoading}
-        />
+        <div className="input-container">
+          <input
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter your prompt..."
+            disabled={isLoading}
+            ref={inputRef}
+          />
+          <label htmlFor="image-upload" className="upload-button">
+            📷
+          </label>
+          <ImageUpload onImageUpload={handleImageUpload} disabled={isLoading} />
+          {currentImage && (
+            <div className="image-preview">
+              <img src={currentImage} alt="Upload preview" />
+              <button className="button" onClick={() => setCurrentImage(null)}>
+                ×
+              </button>
+            </div>
+          )}
+        </div>
         <select
           value={model.name}
           onChange={(e) => {
@@ -299,7 +388,7 @@ function App() {
           ))}
         </select>
 
-        <button type="submit" disabled={isLoading}>
+        <button className="button" type="submit" disabled={isLoading}>
           {isLoading ? 'Generating...' : 'Send'}
         </button>
       </form>
