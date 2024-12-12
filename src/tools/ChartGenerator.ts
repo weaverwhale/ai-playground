@@ -4,12 +4,12 @@ import { Tool } from './Tool';
 function createChartGenerator() {
   const paramsSchema = z.object({
     type: z
-      .enum(['line', 'bar', 'pie', 'gantt', 'sankey'])
+      .enum(['line', 'bar', 'pie', 'gantt', 'sankey', 'git'])
       .describe('Type of chart to generate'),
     data: z
       .array(z.array(z.union([z.string(), z.number()])))
       .describe(
-        'Array of data points. For line/bar: [[label, value], ...]. For pie: [[label, value], ...]. For sankey: [[source, target, value], ...]'
+        'Array of data points. For line/bar: [[label, value], ...]. For pie: [[label, value], ...]. For sankey: [[source, target, value], ...]. For git: [[action, params...], ...]'
       ),
     title: z.string().optional().describe('Chart title'),
     xLabel: z.string().optional().describe('X-axis label'),
@@ -39,6 +39,9 @@ function createChartGenerator() {
             break;
           case 'sankey':
             mermaidCode = generateSankeyChart(data);
+            break;
+          case 'git':
+            mermaidCode = generateGitGraph(data);
             break;
         }
 
@@ -155,6 +158,39 @@ function generateSankeyChart(data: Array<Array<string | number>>): string {
   // Add data rows (source, target, value)
   data.forEach(([source, target, value]) => {
     chart += `${source},${target},${value}\n`;
+  });
+
+  return chart;
+}
+
+function generateGitGraph(data: Array<Array<string | number>>): string {
+  let chart = 'gitGraph\n';
+
+  // Process each action in the data array
+  data.forEach((row) => {
+    const action = row[0].toString().toLowerCase();
+    let line = '    ';
+
+    switch (action) {
+      case 'commit':
+        line += 'commit';
+        // Handle optional commit parameters
+        if (row[1]) line += ` "${row[1]}"`; // Message
+        if (row[2]) line += ` id:"${row[2]}"`;
+        if (row[3]) line += ` type:${row[3]}`;
+        if (row[4]) line += ` tag:"${row[4]}"`;
+        break;
+      case 'branch':
+        line += `branch ${row[1]}`;
+        break;
+      case 'checkout':
+        line += `checkout ${row[1]}`;
+        break;
+      case 'merge':
+        line += `merge ${row[1]}`;
+        break;
+    }
+    chart += line + '\n';
   });
 
   return chart;
