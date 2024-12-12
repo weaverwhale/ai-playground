@@ -119,6 +119,10 @@
   gap: 0.5rem;
 }
 
+.input-container input {
+  padding-right: 2.25em;
+}
+
 .image-preview {
   position: absolute;
   bottom: 100%;
@@ -147,6 +151,10 @@
   position: absolute;
   right: 0;
   padding: 0.5em;
+}
+
+.mermaid {
+  padding: 1em 0;
 }
 
 .mermaid-chart {

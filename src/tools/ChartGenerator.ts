@@ -4,12 +4,12 @@ import { Tool } from './Tool';
 function createChartGenerator() {
   const paramsSchema = z.object({
     type: z
-      .enum(['line', 'bar', 'pie', 'gantt'])
+      .enum(['line', 'bar', 'pie', 'gantt', 'sankey'])
       .describe('Type of chart to generate'),
     data: z
       .array(z.array(z.union([z.string(), z.number()])))
       .describe(
-        'Array of data points. For line/bar: [[label, value], ...]. For pie: [[label, value], ...]'
+        'Array of data points. For line/bar: [[label, value], ...]. For pie: [[label, value], ...]. For sankey: [[source, target, value], ...]'
       ),
     title: z.string().optional().describe('Chart title'),
     xLabel: z.string().optional().describe('X-axis label'),
@@ -36,6 +36,9 @@ function createChartGenerator() {
             break;
           case 'gantt':
             mermaidCode = generateGanttChart(data, title);
+            break;
+          case 'sankey':
+            mermaidCode = generateSankeyChart(data);
             break;
         }
 
@@ -140,6 +143,18 @@ function generateGanttChart(
 
   data.forEach(([task, start, end]) => {
     chart += `    ${task} : ${start}, ${end}\n`;
+  });
+
+  return chart;
+}
+
+function generateSankeyChart(data: Array<Array<string | number>>): string {
+  // Construct the chart string
+  let chart = 'sankey-beta\n';
+
+  // Add data rows (source, target, value)
+  data.forEach(([source, target, value]) => {
+    chart += `${source},${target},${value}\n`;
   });
 
   return chart;
