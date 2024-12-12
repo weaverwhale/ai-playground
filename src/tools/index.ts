@@ -7,7 +7,7 @@ import { createCalculator } from './Calculator';
 import { createImageGenerator } from './ImageGenerator';
 import { createGitHubReview } from './GitHubReview';
 import { createUrbanDictionary } from './UrbanDictionary';
-import { createArimaForecast } from './ArimaForecast';
+import { createForecast } from './Forecast';
 // import { createWeather } from './Weather';
 // import { createTranslator } from './Translator';
 // import { createNewsSearch } from './NewsSearch';
@@ -19,7 +19,7 @@ const rawTools = [
   createImageGenerator(),
   createGitHubReview(),
   createUrbanDictionary(),
-  createArimaForecast(),
+  createForecast(),
   // createWeather(),
   // createTranslator(),
   // createNewsSearch(),

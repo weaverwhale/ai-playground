@@ -15,7 +15,7 @@
     "openai": "^4.68.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "timeseries-analysis": "^1.0.12",
+    "regression": "^2.0.1",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.23.5"
   },
@@ -23,6 +23,7 @@
     "@eslint/js": "^9.13.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/regression": "^2.0.6",
     "@vitejs/plugin-react": "^4.3.3",
     "eslint": "^9.13.0",
     "eslint-plugin-react-hooks": "^5.0.0",
