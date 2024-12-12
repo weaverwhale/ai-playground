@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { Tool } from './Tool';
 
+type Article = {
+  title: string;
+  url: string;
+  source: { name: string };
+};
+
 function createNewsSearch() {
   const paramsSchema = z.object({
     query: z.string().describe('News topic or keywords to search for'),
@@ -27,7 +33,7 @@ function createNewsSearch() {
         return data.articles
           .slice(0, 3)
           .map(
-            (article: any) =>
+            (article: Article) =>
               `- [${article.title}](${article.url}) - ${article.source.name}`
           )
           .join('\n');
