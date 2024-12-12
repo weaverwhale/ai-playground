@@ -1,0 +1,160 @@
+@use './variables' as *;
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-base;
+  margin-bottom: $spacing-base;
+  max-height: calc(100vh - 300px);
+  min-height: 40vh;
+  overflow-y: auto;
+}
+
+.message {
+  padding: 0 $spacing-base;
+  border-radius: $border-radius;
+  max-width: 80%;
+
+  img {
+    margin-bottom: $spacing-base;
+    display: block;
+    max-width: 100%;
+    border-radius: $border-radius;
+  }
+
+  &.user {
+    background-color: $color-light-blue;
+    align-self: flex-end;
+  }
+
+  &.assistant {
+    background-color: $color-light-gray;
+    align-self: flex-start;
+  }
+}
+
+.input-form {
+  width: 100%;
+  display: flex;
+  gap: $spacing-small;
+  position: relative;
+  margin-top: 3em;
+
+  input {
+    width: 100%;
+    flex-grow: 1;
+  }
+
+  .button {
+    padding: 8px 16px;
+    border: $border-width solid #ccc;
+    border-radius: $border-radius;
+    background-color: $color-light;
+    cursor: pointer;
+
+    &:hover {
+      background-color: $color-light-gray;
+    }
+
+    &:disabled {
+      background-color: $color-light-gray;
+      cursor: not-allowed;
+    }
+  }
+
+  .clear-conversation {
+    cursor: pointer;
+    position: absolute;
+    top: -2em;
+    left: 0;
+    font-size: 0.8em;
+  }
+}
+
+.loading-indicator {
+  display: flex;
+  gap: 4px;
+  padding: $spacing-base 0;
+  width: fit-content;
+  align-items: center;
+}
+
+.loading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: $color-gray;
+  animation: bounce 1.4s infinite ease-in-out;
+
+  &:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+
+  &:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+}
+
+.input-container {
+  display: flex;
+  flex-grow: 1;
+  position: relative;
+  align-items: center;
+  gap: $spacing-small;
+
+  input {
+    padding-right: 2.25em;
+  }
+}
+
+.image-preview {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: $spacing-small;
+  padding: $spacing-small;
+  border-radius: $border-radius;
+  display: flex;
+  align-items: flex-start;
+  background-color: $color-light-gray;
+  gap: $spacing-small;
+
+  img {
+    max-height: 100px;
+    border-radius: $border-radius;
+  }
+
+  .button {
+    padding: 0.2em 0.4em;
+    font-size: 0.8em;
+  }
+}
+
+.upload-button {
+  cursor: pointer;
+  position: absolute;
+  right: 0;
+  padding: $spacing-small;
+}
+
+.mermaid {
+  padding: $spacing-base 0;
+}
+
+.mermaid-chart {
+  background-color: $color-light;
+  padding: $spacing-base;
+  border-radius: $border-radius;
+  margin: $spacing-base 0;
+  overflow-x: auto;
+
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+}

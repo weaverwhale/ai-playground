@@ -10,7 +10,7 @@ import mermaid from 'mermaid';
 import { models, systemPrompt, secondStreamPrompt } from './constants';
 import { processToolUsage } from './utils';
 import { tools } from './tools';
-import './App.css';
+import './styles/App.scss';
 
 type ContentPart = {
   type: 'text' | 'image_url';
@@ -42,13 +42,13 @@ function renderMessage(message: ExtendedChatCompletionMessageParam): string {
     let index = 0;
 
     // Replace Mermaid blocks with placeholders
-    content = content.replace(mermaidRegex, (match, code) => {
+    content = content.replace(mermaidRegex, (_match, code) => {
       const id = `mermaid-${index++}`;
       // Add proper newlines and indentation for Mermaid syntax
       const formattedCode = code
         .trim()
         .split('\n')
-        .map((line) => line.trim())
+        .map((line: string) => line.trim())
         .join('\n');
       mermaidBlocks.push({ id, code: formattedCode });
       return `<div id="${id}" class="mermaid">\n${formattedCode}\n</div>`;

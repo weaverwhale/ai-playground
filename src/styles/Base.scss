@@ -25,7 +25,7 @@ input,
 select {
   border-radius: $border-radius;
   border: $border-width solid transparent;
-  padding: $spacing-small $spacing-large;
+  padding: $spacing-small;
   font-size: $font-size-base;
   font-weight: $font-weight-medium;
   font-family: inherit;
@@ -47,21 +47,4 @@ button {
 
 input {
   cursor: inherit;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: $color-text-dark;
-    background-color: $color-light;
-  }
-
-  a:hover {
-    color: $color-primary-light;
-  }
-
-  button,
-  input,
-  select {
-    background-color: $color-light-gray;
-  }
 }
