@@ -1,0 +1,46 @@
+// Colors
+$color-primary: #646cff;
+$color-primary-hover: #535bf2;
+$color-primary-light: #747bff;
+$color-dark: #242424;
+$color-darker: #1a1a1a;
+$color-light: #ffffff;
+$color-light-gray: #f9f9f9;
+$color-text-dark: #213547;
+$color-text-light: rgba(255, 255, 255, 0.87);
+
+// Typography
+$font-family-base: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-size-base: 1em;
+$font-size-h1: 3.2em;
+$line-height-base: 1.5;
+$line-height-h1: 1.1;
+
+// Spacing
+$spacing-base: 1em;
+$spacing-large: 1.2em;
+$spacing-small: 0.6em;
+
+// Borders
+$border-radius: 8px;
+$border-width: 1px;
+
+// Transitions
+$transition-speed: 0.25s;
+
+:root {
+  font-family: $font-family-base;
+  line-height: $line-height-base;
+  font-weight: $font-weight-normal;
+
+  color-scheme: light dark;
+  color: $color-text-light;
+  background-color: $color-dark;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

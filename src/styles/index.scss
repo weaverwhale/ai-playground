@@ -1,0 +1,67 @@
+@use './variables' as *;
+
+body {
+  margin: 0;
+  padding: $spacing-base;
+}
+
+h1 {
+  font-size: $font-size-h1;
+  line-height: $line-height-h1;
+}
+
+a {
+  font-weight: $font-weight-medium;
+  color: $color-primary;
+  text-decoration: inherit;
+
+  &:hover {
+    color: $color-primary-hover;
+  }
+}
+
+button,
+input,
+select {
+  border-radius: $border-radius;
+  border: $border-width solid transparent;
+  padding: $spacing-small $spacing-large;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  font-family: inherit;
+  background-color: $color-darker;
+  cursor: pointer;
+  transition: border-color $transition-speed;
+}
+
+button {
+  &:hover {
+    border-color: $color-primary;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+  }
+}
+
+input {
+  cursor: inherit;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: $color-text-dark;
+    background-color: $color-light;
+  }
+
+  a:hover {
+    color: $color-primary-light;
+  }
+
+  button,
+  input,
+  select {
+    background-color: $color-light-gray;
+  }
+}
