@@ -6,7 +6,6 @@ import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { ImageUpload } from './components/ImageUpload';
 import mermaid from 'mermaid';
-import { Marked } from 'marked';
 
 import { models, systemPrompt, secondStreamPrompt } from './constants';
 import { processToolUsage } from './utils';

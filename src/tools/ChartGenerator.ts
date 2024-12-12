@@ -60,27 +60,25 @@ function generateLineChart(
   xLabel?: string,
   yLabel?: string
 ): string {
-  let chart = 'xychart-beta\n';
-  if (title) chart += `title "${title}"\n`;
-
-  // Create x-axis with label and values
-  const labels = data.map(([x]) => `"${x}"`);
-  chart += `x-axis [${labels.join(', ')}]\n`;
-
-  // Calculate y-axis range
+  // Extract labels and values from data
+  const labels = data.map(([x]) => x.toString());
   const values = data.map(([, y]) => Number(y));
-  const maxY = Math.max(...values);
-  chart += `y-axis [0, ${Math.ceil(maxY * 1.2)}]\n`;
 
-  // Add axis labels if provided
-  if (xLabel) chart += `x-label "${xLabel}"\n`;
-  if (yLabel) chart += `y-label "${yLabel}"\n`;
+  // Construct the chart string
+  let chart = 'xychart-beta\n';
 
-  // Add data points
-  chart += 'line\n';
-  data.forEach(([x, y]) => {
-    chart += `    "${x}" ${y}\n`;
-  });
+  if (title) {
+    chart += `title "${title}"\n`;
+  }
+
+  // Add x-axis with labels
+  chart += `x-axis "${xLabel || ''}" [${labels.map((l) => `"${l}"`).join(',')}]\n`;
+
+  // Add y-axis
+  chart += `y-axis "${yLabel || ''}" ${Math.min(...values)} --> ${Math.max(...values)}\n`;
+
+  // Add line data
+  chart += `line [${values.join(',')}]\n`;
 
   return chart;
 }
@@ -91,27 +89,29 @@ function generateBarChart(
   xLabel?: string,
   yLabel?: string
 ): string {
-  let chart = 'xychart-beta\n';
-  if (title) chart += `title "${title}"\n`;
-
-  // Create x-axis with label and values
-  const labels = data.map(([x]) => `"${x}"`);
-  chart += `x-axis [${labels.join(', ')}]\n`;
-
-  // Calculate y-axis range
+  // Extract labels and values from data
+  const labels = data.map(([x]) => x.toString());
   const values = data.map(([, y]) => Number(y));
-  const maxY = Math.max(...values);
-  chart += `y-axis [0, ${Math.ceil(maxY * 1.2)}]\n`;
 
-  // Add axis labels if provided
-  if (xLabel) chart += `x-label "${xLabel}"\n`;
-  if (yLabel) chart += `y-label "${yLabel}"\n`;
+  // Determine Y-axis range
+  const minY = 0;
+  const maxY = Math.ceil(Math.max(...values) * 1.2); // Adding 20% padding
 
-  // Add data points
-  chart += 'bar\n';
-  data.forEach(([x, y]) => {
-    chart += `    "${x}" ${y}\n`;
-  });
+  // Construct the chart string
+  let chart = 'xychart-beta\n';
+
+  if (title) {
+    chart += `title "${title}"\n`;
+  }
+
+  // Add x-axis with labels
+  chart += `x-axis "${xLabel || ''}" [${labels.map((l) => `"${l}"`).join(',')}]\n`;
+
+  // Add y-axis
+  chart += `y-axis "${yLabel || ''}" ${minY} --> ${maxY}\n`;
+
+  // Add bar data
+  chart += `bar [${values.join(',')}]\n`;
 
   return chart;
 }
@@ -121,7 +121,7 @@ function generatePieChart(
   title?: string
 ): string {
   let chart = 'pie\n';
-  if (title) chart += `    title ${title}\n`;
+  if (title) chart += `    title "${title}"\n`;
 
   data.forEach(([label, value]) => {
     chart += `    "${label}" : ${value}\n`;
@@ -135,7 +135,7 @@ function generateGanttChart(
   title?: string
 ): string {
   let chart = 'gantt\n';
-  if (title) chart += `    title ${title}\n`;
+  if (title) chart += `    title "${title}"\n`;
   chart += '    dateFormat YYYY-MM-DD\n';
 
   data.forEach(([task, start, end]) => {
