@@ -24,6 +24,15 @@ export async function processToolUsage(content: string): Promise<string> {
           ) => Promise<string | { finished: boolean }>
         )(parsedParams);
 
+        // Special handling for chart_generator - don't process the result further
+        if (toolName === 'chart_generator') {
+          processedContent = processedContent.replace(
+            fullMatch,
+            toolResult as string
+          );
+          continue;
+        }
+
         if (typeof toolResult === 'string') {
           processedContent = processedContent.replace(fullMatch, toolResult);
         } else {

@@ -8,6 +8,7 @@ import { createImageGenerator } from './ImageGenerator';
 import { createGitHubReview } from './GitHubReview';
 import { createUrbanDictionary } from './UrbanDictionary';
 import { createForecast } from './Forecast';
+import { createChartGenerator } from './ChartGenerator';
 // import { createWeather } from './Weather';
 // import { createTranslator } from './Translator';
 // import { createNewsSearch } from './NewsSearch';
@@ -20,6 +21,7 @@ const rawTools = [
   createGitHubReview(),
   createUrbanDictionary(),
   createForecast(),
+  createChartGenerator(),
   // createWeather(),
   // createTranslator(),
   // createNewsSearch(),

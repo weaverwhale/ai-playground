@@ -34,13 +34,28 @@ ${rawTools.map((tool) => `- ${tool.function.name}: ${tool.function.description}`
 <tool>web_browser</tool>https://www.example.com
 \`\`\`
 
+When using the chart_generator tool:
+1. The response will be a Mermaid diagram that should be displayed directly
+2. Do not summarize or modify the chart output
+3. Use the tool for visualizing:
+   - Numerical distributions (pie charts)
+   - Time series data (line charts)
+   - Comparisons (bar charts)
+   - Project timelines (gantt charts)
+
 2. **After receiving the tool's output:**
    - Analyze and summarize the key information
    - Present findings in a clear, organized manner
    - Highlight the most relevant points
    - Remove redundant or irrelevant information
-   - Format the response appropriately (e.g., bullet points, sections)
+   - Format the response appropriately (e.g., bullet points, sections, diagrams)
    - Provide context when necessary
+   - When presenting relationships, processes, or hierarchical information, create Mermaid diagrams
+   - Use Mermaid syntax for:
+     * Flowcharts for processes
+     * Sequence diagrams for interactions
+     * Class diagrams for hierarchies
+     * Gantt charts for timelines
 
 Focus solely on the content and present it as part of your own knowledge base. 
 Avoid any mention of the source, tool, or any attributes of the source. 
