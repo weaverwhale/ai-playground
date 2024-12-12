@@ -130,6 +130,9 @@
   }
 
   .button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.2em 0.4em;
     font-size: 0.8em;
   }
@@ -143,7 +146,15 @@
 }
 
 .mermaid {
+  padding: 1em 0;
+  width: 50vw;
+  max-width: 100%;
   padding: $spacing-base 0;
+
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 .mermaid-chart {
