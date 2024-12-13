@@ -67,8 +67,11 @@ function generateLineChart(
   yLabel?: string
 ): string {
   // Extract labels and values from data
-  const labels = data.map(([x]) => x.toString());
-  const values = data.map(([, y]) => Number(y));
+  const labels = data.map(([x]) => x?.toString() || '');
+  const values = data.map(([, y]) => {
+    const num = Number(y);
+    return isNaN(num) ? 0 : num; // Convert NaN to 0
+  });
 
   // Construct the chart string
   let chart = 'xychart-beta\n';
@@ -80,8 +83,13 @@ function generateLineChart(
   // Add x-axis with labels
   chart += `x-axis "${xLabel || ''}" [${labels.map((l) => `"${l}"`).join(',')}]\n`;
 
-  // Add y-axis
-  chart += `y-axis "${yLabel || ''}" ${Math.min(...values)} --> ${Math.max(...values)}\n`;
+  // Calculate y-axis range with validation
+  const validValues = values.filter((v) => !isNaN(v));
+  const minY = Math.min(...validValues);
+  const maxY = Math.max(...validValues);
+
+  // Add y-axis with validated range
+  chart += `y-axis "${yLabel || ''}" ${isFinite(minY) ? minY : 0} --> ${isFinite(maxY) ? maxY : 1}\n`;
 
   // Add line data
   chart += `line [${values.join(',')}]\n`;
@@ -95,13 +103,16 @@ function generateBarChart(
   xLabel?: string,
   yLabel?: string
 ): string {
-  // Extract labels and values from data
-  const labels = data.map(([x]) => x.toString());
-  const values = data.map(([, y]) => Number(y));
+  // Extract labels and values from data, ensuring numeric conversion
+  const labels = data.map(([x]) => x?.toString() || '');
+  const values = data.map(([, y]) => {
+    const num = Number(y);
+    return isNaN(num) ? 0 : num; // Convert NaN to 0
+  });
 
   // Determine Y-axis range
   const minY = 0;
-  const maxY = Math.ceil(Math.max(...values) * 1.2); // Adding 20% padding
+  const maxY = Math.ceil(Math.max(...values.filter((v) => !isNaN(v))) * 1.2); // Adding 20% padding
 
   // Construct the chart string
   let chart = 'xychart-beta\n';
@@ -113,8 +124,8 @@ function generateBarChart(
   // Add x-axis with labels
   chart += `x-axis "${xLabel || ''}" [${labels.map((l) => `"${l}"`).join(',')}]\n`;
 
-  // Add y-axis
-  chart += `y-axis "${yLabel || ''}" ${minY} --> ${maxY}\n`;
+  // Add y-axis with validated range
+  chart += `y-axis "${yLabel || ''}" ${minY} --> ${maxY || 1}\n`; // Default to 1 if maxY is invalid
 
   // Add bar data
   chart += `bar [${values.join(',')}]\n`;

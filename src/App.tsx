@@ -403,6 +403,20 @@ function App() {
               });
             }
           }
+
+          // Add this check for final message without tool calls
+          if (
+            chunk.choices[0]?.finish_reason === 'stop' &&
+            !toolCallInProgress &&
+            !fullContent
+          ) {
+            setMessages((prevMessages) => {
+              const newMessages = [...prevMessages];
+              newMessages[newMessages.length - 1].content =
+                "I apologize, but I couldn't generate a response. Please try again.";
+              return newMessages;
+            });
+          }
         }
       } else {
         const response = stream as OpenAI.Chat.ChatCompletion;
