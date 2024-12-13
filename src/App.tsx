@@ -480,7 +480,7 @@ function App() {
       <form className="input-form" onSubmit={handleSubmit}>
         {messages.length > 0 && (
           <div className="clear-conversation" onClick={handleClear}>
-            Clear conversation
+            <span>Clear conversation</span>
           </div>
         )}
         <div className="input-container">

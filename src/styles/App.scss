@@ -98,7 +98,10 @@
     position: absolute;
     top: -$spacing-base;
     left: $spacing-base;
-    font-size: 0.8em;
+
+    span {
+      font-size: $font-size-small;
+    }
   }
 }
 
@@ -135,6 +138,10 @@
 
   input {
     padding-right: 2.25em;
+  }
+
+  @media (min-width: $tablet) {
+    font-size: $font-size-large;
   }
 }
 
@@ -173,8 +180,8 @@
 
 .mermaid {
   padding: 1em 0;
-  width: 60vw;
-  max-width: 70vh;
+  width: 70vw;
+  max-width: 100%;
   padding: $spacing-base 0;
 
   svg {
