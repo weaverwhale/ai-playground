@@ -24,7 +24,7 @@ function createForecast() {
     'forecast',
     'Useful for forecasting future values based on time series analysis',
     async (params) => {
-      const { data, periods, interval } = params;
+      const { data, periods = 5, interval = 'days' } = params;
       console.log('Processing forecast:', {
         dataLength: data.length,
         periods,

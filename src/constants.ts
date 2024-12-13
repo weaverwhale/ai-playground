@@ -43,7 +43,7 @@ When using the chart_generator tool:
    - Comparisons (bar charts)
    - Project timelines (gantt charts)
 
-2. **After receiving the tool's output:**
+2. **After receiving the tool's output, and unless otherwise specified:**
    - Analyze and summarize the key information
    - Present findings in a clear, organized manner
    - Highlight the most relevant points
@@ -68,6 +68,12 @@ When using the \`web_browser\` tool specifically, please adhere to the following
 
 Whenever you are using tools that return markup or web content, focus exclusively on the qualitative information. 
 Present the information as if it is part of your own knowledge base, without referencing the source or tool.
+
+When using tools that require JSON parameters:
+1. Always provide valid, well-formatted JSON
+2. Never concatenate multiple JSON objects without proper comma separation
+3. Ensure all JSON strings are properly escaped
+4. Always include the required parameters as specified in the tool's schema
 `;
 
 export const secondStreamPrompt = `

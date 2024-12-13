@@ -90,6 +90,36 @@ function renderMessage(message: ExtendedChatCompletionMessageParam): string {
   return '';
 }
 
+function isValidJSON(str: string): boolean {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sanitizeJSONString(str: string): string {
+  // Remove any potential duplicate JSON objects that are concatenated without commas
+  const trimmed = str.trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    // If we detect multiple objects, try to fix them
+    const matches = trimmed.match(/\}{/g);
+    if (matches) {
+      // Split on }{ and rejoin with comma
+      return trimmed
+        .split(/\}\{/)
+        .map((part, i) => {
+          if (i === 0) return part + '}';
+          if (i === trimmed.split(/\}\{/).length - 1) return '{' + part;
+          return '{' + part + '}';
+        })
+        .join(',');
+    }
+  }
+  return trimmed;
+}
+
 function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState('');
@@ -229,6 +259,12 @@ function App() {
             }
             if (toolCall.function?.arguments) {
               currentToolCall.arguments += toolCall.function.arguments;
+
+              // Try to validate and fix JSON as it comes in
+              const sanitized = sanitizeJSONString(currentToolCall.arguments);
+              if (isValidJSON(sanitized)) {
+                currentToolCall.arguments = sanitized;
+              }
             }
           }
 
@@ -249,15 +285,49 @@ function App() {
             toolCallInProgress
           ) {
             try {
-              const args = JSON.parse(currentToolCall.arguments);
               let toolCallContent;
 
               if (currentToolCall.name === 'web_browser') {
-                toolCallContent = `<tool>${currentToolCall.name}</tool>${args.url}`;
+                try {
+                  const sanitized = sanitizeJSONString(
+                    currentToolCall.arguments
+                  );
+                  if (!isValidJSON(sanitized)) {
+                    throw new Error('Invalid JSON in tool arguments');
+                  }
+                  const args = JSON.parse(sanitized);
+                  toolCallContent = `<tool>${currentToolCall.name}</tool>${args.url}`;
+                } catch (error) {
+                  console.error('Error parsing web_browser arguments:', error);
+                  toolCallContent = 'Error: Invalid tool arguments';
+                }
               } else if (currentToolCall.name === 'wikipedia') {
-                toolCallContent = `<tool>${currentToolCall.name}</tool>${args.query}`;
+                try {
+                  const sanitized = sanitizeJSONString(
+                    currentToolCall.arguments
+                  );
+                  if (!isValidJSON(sanitized)) {
+                    throw new Error('Invalid JSON in tool arguments');
+                  }
+                  const args = JSON.parse(sanitized);
+                  toolCallContent = `<tool>${currentToolCall.name}</tool>${args.query}`;
+                } catch (error) {
+                  console.error('Error parsing wikipedia arguments:', error);
+                  toolCallContent = 'Error: Invalid tool arguments';
+                }
               } else {
-                toolCallContent = `<tool>${currentToolCall.name}</tool>${JSON.stringify(args)}`;
+                try {
+                  const sanitized = sanitizeJSONString(
+                    currentToolCall.arguments
+                  );
+                  if (!isValidJSON(sanitized)) {
+                    throw new Error('Invalid JSON in tool arguments');
+                  }
+                  toolCallContent = `<tool>${currentToolCall.name}</tool>${sanitized}`;
+                } catch (error) {
+                  console.error('Error parsing tool arguments:', error);
+                  toolCallContent = 'Error: Invalid tool arguments';
+                }
               }
 
               const processedContent = await processToolUsage(toolCallContent);
@@ -330,6 +400,7 @@ function App() {
       console.error('Error:', error);
     } finally {
       setIsLoading(false);
+      inputRef.current?.focus();
     }
   }
 
@@ -357,7 +428,9 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Chat 🤖</h1>
+      <div className="header" onClick={handleClear}>
+        <h1>Chat 🤖</h1>
+      </div>
       <div className="messages" ref={messagesContainerRef}>
         {messages.map((message, index) => (
           <div key={index} className={`message ${message.role}`}>
@@ -393,7 +466,6 @@ function App() {
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Enter your prompt..."
-            disabled={isLoading}
             ref={inputRef}
           />
           <label htmlFor="image-upload" className="upload-button">
