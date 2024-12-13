@@ -101,21 +101,21 @@ function isValidJSON(str: string): boolean {
 }
 
 function sanitizeJSONString(str: string): string {
-  // Remove any potential duplicate JSON objects that are concatenated without commas
   const trimmed = str.trim();
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-    // If we detect multiple objects, try to fix them
-    const matches = trimmed.match(/\}{/g);
-    if (matches) {
-      // Split on }{ and rejoin with comma
-      return trimmed
-        .split(/\}\{/)
-        .map((part, i) => {
-          if (i === 0) return part + '}';
-          if (i === trimmed.split(/\}\{/).length - 1) return '{' + part;
-          return '{' + part + '}';
-        })
-        .join(',');
+  if (trimmed.startsWith('{')) {
+    // Find the index of the first closing brace
+    let braceCount = 1;
+    let index = 1;
+
+    while (braceCount > 0 && index < trimmed.length) {
+      if (trimmed[index] === '{') braceCount++;
+      if (trimmed[index] === '}') braceCount--;
+      index++;
+    }
+
+    // If we found a matching closing brace, return everything up to that point
+    if (braceCount === 0) {
+      return trimmed.substring(0, index);
     }
   }
   return trimmed;

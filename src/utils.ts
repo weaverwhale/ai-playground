@@ -60,11 +60,25 @@ function parseToolParameters<
 >(tool: Tool<TParams, TResult>, params: string): z.infer<TParams> {
   const schemaFields = Object.keys(tool.schema.shape);
 
+  // Clean up potentially malformed JSON
+  const cleanParams = params
+    .trim()
+    // Fix multiple objects without commas
+    .replace(/}\s*{/g, '},{')
+    // Ensure it's a valid array if multiple objects
+    .replace(/^{(.+)}$/, '[{$1}]');
+
   if (schemaFields.length === 1) {
     const [paramKey] = schemaFields;
-    // Try to parse as JSON first in case it's a complex parameter
     try {
-      const parsed = JSON.parse(params);
+      // Try parsing as JSON first
+      const parsed = JSON.parse(cleanParams);
+      // Handle array of objects
+      if (Array.isArray(parsed)) {
+        // Merge multiple objects into one
+        const merged = parsed.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+        return { [paramKey]: merged[paramKey] || merged } as z.infer<TParams>;
+      }
       // If it's already in the correct format, return it
       if (parsed[paramKey]) {
         return parsed as z.infer<TParams>;
@@ -78,7 +92,8 @@ function parseToolParameters<
   }
 
   try {
-    return JSON.parse(params) as z.infer<TParams>;
+    const parsed = JSON.parse(cleanParams);
+    return Array.isArray(parsed) ? parsed[0] : parsed;
   } catch (e) {
     console.warn(`Failed to parse parameters for ${tool.name}:`, e);
     throw e;
