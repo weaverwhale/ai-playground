@@ -4,7 +4,7 @@ import { OpenAI } from 'openai';
 import { Stream } from 'openai/streaming.mjs';
 import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
-import { ImageUpload } from './components/ImageUpload';
+import { FileUpload } from './components/FileUpload';
 import mermaid from 'mermaid';
 
 import { models, systemPrompt, secondStreamPrompt } from './constants';
@@ -13,9 +13,10 @@ import { tools } from './tools';
 import './styles/App.scss';
 
 type ContentPart = {
-  type: 'text' | 'image_url';
+  type: 'text' | 'image_url' | 'file_url';
   text?: string;
   image_url?: { url: string };
+  file_url?: { url: string; name: string; type: string };
 };
 
 type ExtendedChatCompletionMessageParam = Omit<
@@ -132,7 +133,9 @@ function App() {
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
-  const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [currentFileName, setCurrentFileName] = useState<string | null>(null);
+  const [currentFileType, setCurrentFileType] = useState<string | null>(null);
 
   const handleScroll = useCallback((e: Event) => {
     const messagesContainer = messagesContainerRef.current;
@@ -170,15 +173,27 @@ function App() {
     dangerouslyAllowBrowser: true,
   });
 
-  const handleImageUpload = (base64Image: string) => {
-    setCurrentImage(base64Image);
+  const handleFileUpload = (
+    base64File: string,
+    fileName: string,
+    fileType: string
+  ) => {
+    setCurrentFile(base64File);
+    setCurrentFileName(fileName);
+    setCurrentFileType(fileType);
     // focus the input
     inputRef.current?.focus();
   };
 
+  const clearFile = () => {
+    setCurrentFile(null);
+    setCurrentFileName(null);
+    setCurrentFileType(null);
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if ((!prompt.trim() && !currentImage) || isLoading) return;
+    if ((!prompt.trim() && !currentFileName) || isLoading) return;
 
     setLastUserMessage(prompt.trim());
     setIsLoading(true);
@@ -190,14 +205,17 @@ function App() {
           type: 'text',
           text: prompt,
         },
-        ...(currentImage
+        ...(currentFileName && currentFile
           ? [
-              {
-                type: 'image_url' as const,
-                image_url: {
-                  url: currentImage,
-                },
-              },
+              currentFileType?.startsWith('image')
+                ? {
+                    type: 'image_url' as const,
+                    image_url: { url: currentFile },
+                  }
+                : {
+                    type: 'text' as const,
+                    text: `File: ${currentFileName}\nContent: ${currentFile}`,
+                  },
             ]
           : []),
       ],
@@ -205,7 +223,8 @@ function App() {
 
     setMessages((prevMessages) => [...prevMessages, userMessage]);
     setPrompt('');
-    setCurrentImage(null);
+    setCurrentFile(null);
+    setCurrentFileName(null);
 
     try {
       const assistantMessage: ExtendedChatCompletionMessageParam = {
@@ -237,6 +256,8 @@ function App() {
         tools,
         tool_choice: 'auto',
       });
+
+      clearFile();
 
       if (model.stream) {
         const streamResponse = stream as Stream<ChatCompletionChunk>;
@@ -408,7 +429,9 @@ function App() {
     if (isLoading) return;
     setMessages([]);
     setPrompt('');
-    setCurrentImage(null);
+    setCurrentFile(null);
+    setCurrentFileName(null);
+    setCurrentFileType(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -468,14 +491,18 @@ function App() {
             placeholder="Enter your prompt..."
             ref={inputRef}
           />
-          <label htmlFor="image-upload" className="upload-button">
-            📷
+          <label htmlFor="file-upload" className="upload-button">
+            📎
           </label>
-          <ImageUpload onImageUpload={handleImageUpload} disabled={isLoading} />
-          {currentImage && (
+          <FileUpload onFileUpload={handleFileUpload} disabled={isLoading} />
+          {currentFileName && (
             <div className="image-preview">
-              <img src={currentImage} alt="Upload preview" />
-              <button className="button" onClick={() => setCurrentImage(null)}>
+              {currentFileType?.startsWith('image') ? (
+                <img src={currentFile} alt="Upload preview" />
+              ) : (
+                <div className="file-preview">📄 {currentFileName}</div>
+              )}
+              <button className="button" onClick={clearFile}>
                 ×
               </button>
             </div>
