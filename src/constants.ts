@@ -1,6 +1,6 @@
 import { rawTools } from './tools';
 import { openai } from './clients/openai';
-import { gemini } from './clients/gemini';
+// import { gemini } from './clients/gemini';
 
 export const models = [
   {
@@ -27,12 +27,13 @@ export const models = [
     stream: false,
     client: openai,
   },
-  {
-    name: 'gemini-1.5-flash',
-    label: 'Gemini 1.5 Flash',
-    stream: true,
-    client: gemini,
-  },
+  // CORS issues with Gemini
+  // {
+  //   name: 'gemini-1.5-flash',
+  //   label: 'Gemini 1.5 Flash',
+  //   stream: true,
+  //   client: gemini,
+  // },
 ];
 
 export type Model = (typeof models)[number];
