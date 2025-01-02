@@ -1,8 +1,7 @@
 import { rawTools } from './tools';
 import { Tool } from './tools/Tool';
 import * as z from 'zod';
-import { openai } from './openai';
-import { models, secondStreamPrompt } from './constants';
+import { Model, secondStreamPrompt } from './constants';
 import {
   ChatCompletionChunk,
   ChatCompletionMessageParam,
@@ -227,7 +226,7 @@ export type ExtendedChatCompletionMessageParam = Omit<
 };
 
 export async function runFirstStream(
-  model: (typeof models)[number],
+  model: Model,
   stream: Stream<ChatCompletionChunk>,
   setMessages: React.Dispatch<
     React.SetStateAction<ExtendedChatCompletionMessageParam[]>
@@ -319,7 +318,7 @@ export async function runSecondStream(
   currentToolCall: ToolCall,
   toolCallContent: string,
   processedContent: string,
-  model: (typeof models)[number],
+  model: Model,
   setMessages: React.Dispatch<
     React.SetStateAction<ExtendedChatCompletionMessageParam[]>
   >
@@ -334,7 +333,7 @@ export async function runSecondStream(
       });
     } else if (currentToolCall.name !== 'image_generator') {
       // For other tools, proceed with summarization
-      const summaryStream = await openai.chat.completions.create({
+      const summaryStream = await model.client.chat.completions.create({
         messages: [
           {
             role: 'system',

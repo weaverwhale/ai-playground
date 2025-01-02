@@ -4,10 +4,10 @@ import { Stream } from 'openai/streaming.mjs';
 import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { OpenAI } from 'openai';
-import { openai } from './openai';
-import { FileUpload } from './components/FileUpload';
 import mermaid from 'mermaid';
 
+import { openai } from './openai';
+import { gemini } from './gemini';
 import { models, systemPrompt } from './constants';
 import {
   processToolUsage,
@@ -15,6 +15,8 @@ import {
   runFirstStream,
 } from './utils';
 import { tools } from './tools';
+
+import { ChatForm } from './components/ChatForm';
 import './styles/App.scss';
 
 mermaid.initialize({
@@ -189,7 +191,7 @@ function App() {
       };
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
-      const stream = await openai.chat.completions.create({
+      const stream = await model.client.chat.completions.create({
         messages: [
           ...(model.stream
             ? [
@@ -236,6 +238,12 @@ function App() {
       }
     } catch (error) {
       console.error('Error:', error);
+      setMessages((prevMessages) => {
+        const newMessages = [...prevMessages];
+        newMessages[newMessages.length - 1].content =
+          'Error: Something went wrong. Please try again.';
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -294,56 +302,24 @@ function App() {
         <div ref={messagesEndRef} />
       </div>
 
-      <form className="input-form" onSubmit={handleSubmit}>
-        {messages.length > 0 && (
-          <div className="clear-conversation" onClick={handleClear}>
-            <span>Clear conversation</span>
-          </div>
-        )}
-        <div className="input-container">
-          <input
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter your prompt..."
-            ref={inputRef}
-          />
-          <label htmlFor="file-upload" className="upload-button">
-            📎
-          </label>
-          <FileUpload onFileUpload={handleFileUpload} disabled={isLoading} />
-          {currentFileName && (
-            <div className="image-preview">
-              {currentFileType?.startsWith('image') ? (
-                <img src={currentFile || ''} alt="Upload preview" />
-              ) : (
-                <div className="file-preview">📄 {currentFileName}</div>
-              )}
-              <button className="button" onClick={clearFile}>
-                ×
-              </button>
-            </div>
-          )}
-        </div>
-        <select
-          value={model.name}
-          onChange={(e) => {
-            setModel(models.find((m) => m.name === e.target.value)!);
-            handleClear();
-          }}
-          disabled={isLoading}
-        >
-          {models.map((model) => (
-            <option key={model.name} value={model.name}>
-              {model.label}
-            </option>
-          ))}
-        </select>
-
-        <button className="button" type="submit" disabled={isLoading}>
-          {isLoading ? 'Generating...' : 'Send'}
-        </button>
-      </form>
+      <ChatForm
+        prompt={prompt}
+        setPrompt={setPrompt}
+        handleSubmit={handleSubmit}
+        handleKeyDown={handleKeyDown}
+        handleClear={handleClear}
+        clearFile={clearFile}
+        handleFileUpload={handleFileUpload}
+        isLoading={isLoading}
+        messages={messages}
+        currentFileName={currentFileName}
+        currentFileType={currentFileType}
+        currentFile={currentFile}
+        model={model}
+        setModel={setModel}
+        models={models}
+        inputRef={inputRef}
+      />
     </div>
   );
 }
