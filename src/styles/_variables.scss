@@ -1,6 +1,6 @@
 // Colors
 $color-primary: #646cff;
-$color-primary-hover: #535bf2;
+$color-primary-darker: #535bf2;
 $color-primary-light: #747bff;
 $color-light-blue: #e3f2fd;
 $color-dark: #242424;
@@ -39,34 +39,45 @@ $border-width: 1px;
 $transition-speed: 0.25s;
 
 :root {
+  --color-bg: #{$color-light};
+  --color-text: #{$color-text-dark};
+  --color-border: #{$color-gray};
+  --color-card-bg: #{$color-light};
+  --color-message-user: #{$color-light-blue};
+  --color-message-assistant: #{$color-light-gray};
+  --color-button-bg: #{$color-light-gray};
+
+  &[data-theme='dark'] {
+    --color-bg: #{$color-dark};
+    --color-text: #{$color-text-light};
+    --color-border: #{$color-light-gray};
+    --color-card-bg: #{$color-darker};
+    --color-message-user: #{$color-primary-darker};
+    --color-message-assistant: #{$color-darker};
+    --color-button-bg: #{$color-darker};
+  }
+
   font-family: $font-family-base;
   line-height: $line-height-base;
   font-weight: $font-weight-normal;
 
-  color-scheme: light dark;
-  color: $color-text-light;
-  background-color: $color-dark;
+  color: var(--color-text);
+  background-color: var(--color-bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: $color-text-dark;
-    background-color: $color-light;
-  }
 
   a:hover {
-    color: $color-primary-light;
+    color: var(--color-text);
   }
 
   button,
   input,
   select {
-    background-color: $color-light-gray;
+    color: var(--color-text);
+    background-color: var(--color-bg);
   }
 }
 

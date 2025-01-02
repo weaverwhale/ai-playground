@@ -1,6 +1,9 @@
 @use './variables' as *;
 
 .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: $spacing-base;
 
   h1 {
@@ -42,12 +45,12 @@
   }
 
   &.user {
-    background-color: $color-light-blue;
+    background-color: var(--color-message-user);
     align-self: flex-end;
   }
 
   &.assistant {
-    background-color: $color-light-gray;
+    background-color: var(--color-message-assistant);
     align-self: flex-start;
   }
 }
@@ -64,25 +67,32 @@
 
   input {
     width: 100%;
-    border: $border-width solid $color-light-gray;
+    border: $border-width solid var(--color-border);
     flex-grow: 1;
     flex-basis: 100%;
   }
 
+  select {
+    border: $border-width solid var(--color-border);
+    border-radius: $border-radius;
+    background-color: var(--color-bg);
+    cursor: pointer;
+  }
+
   .button {
     padding: $spacing-small $spacing-base;
-    border: $border-width solid #ccc;
+    border: $border-width solid var(--color-border);
     border-radius: $border-radius;
-    background-color: $color-light;
+    background-color: var(--color-bg);
     cursor: pointer;
     flex-grow: 1;
 
     &:hover {
-      background-color: $color-light-gray;
+      background-color: var(--color-button-bg);
     }
 
     &:disabled {
-      background-color: $color-light-gray;
+      background-color: var(--color-button-bg);
       cursor: not-allowed;
     }
   }
@@ -117,7 +127,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: $color-gray;
+  background-color: var(--color-border);
   animation: bounce 1.4s infinite ease-in-out;
 
   &:nth-child(1) {

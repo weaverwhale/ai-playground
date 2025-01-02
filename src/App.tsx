@@ -6,8 +6,6 @@ import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { OpenAI } from 'openai';
 import mermaid from 'mermaid';
 
-import { openai } from './openai';
-import { gemini } from './gemini';
 import { models, systemPrompt } from './constants';
 import {
   processToolUsage,
@@ -16,6 +14,7 @@ import {
 } from './utils';
 import { tools } from './tools';
 
+import { ThemeToggle } from './components/ThemeToggle';
 import { ChatForm } from './components/ChatForm';
 import './styles/App.scss';
 
@@ -276,8 +275,9 @@ function App() {
 
   return (
     <div className="container">
-      <div className="header" onClick={handleClear}>
-        <h1>Chat 🤖</h1>
+      <div className="header">
+        <h1 onClick={handleClear}>Chat 🤖</h1>
+        <ThemeToggle />
       </div>
       <div className="messages" ref={messagesContainerRef}>
         {messages.map((message, index) => (
