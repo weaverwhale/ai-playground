@@ -9,6 +9,7 @@ import { createGitHubReview } from './GitHubReview';
 import { createUrbanDictionary } from './UrbanDictionary';
 import { createForecast } from './Forecast';
 import { createChartGenerator } from './ChartGenerator';
+// import { createTextReader } from './TextReader';
 // import { createWeather } from './Weather';
 // import { createTranslator } from './Translator';
 // import { createNewsSearch } from './NewsSearch';
@@ -22,6 +23,7 @@ const rawTools = [
   createUrbanDictionary(),
   createForecast(),
   createChartGenerator(),
+  // createTextReader(),
   // createWeather(),
   // createTranslator(),
   // createNewsSearch(),
