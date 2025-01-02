@@ -1,30 +1,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { marked } from 'marked';
-import { OpenAI } from 'openai';
 import { Stream } from 'openai/streaming.mjs';
 import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { OpenAI } from 'openai';
+import { openai } from './openai';
 import { FileUpload } from './components/FileUpload';
 import mermaid from 'mermaid';
 
-import { models, systemPrompt, secondStreamPrompt } from './constants';
-import { processToolUsage } from './utils';
+import { models, systemPrompt } from './constants';
+import {
+  processToolUsage,
+  ExtendedChatCompletionMessageParam,
+  runFirstStream,
+} from './utils';
 import { tools } from './tools';
 import './styles/App.scss';
-
-type ContentPart = {
-  type: 'text' | 'image_url' | 'file_url';
-  text?: string;
-  image_url?: { url: string };
-  file_url?: { url: string; name: string; type: string };
-};
-
-type ExtendedChatCompletionMessageParam = Omit<
-  ChatCompletionMessageParam,
-  'content'
-> & {
-  content: string | ContentPart[];
-};
 
 mermaid.initialize({
   startOnLoad: true,
@@ -91,36 +82,6 @@ function renderMessage(message: ExtendedChatCompletionMessageParam): string {
   return '';
 }
 
-function isValidJSON(str: string): boolean {
-  try {
-    JSON.parse(str);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function sanitizeJSONString(str: string): string {
-  const trimmed = str.trim();
-  if (trimmed.startsWith('{')) {
-    // Find the index of the first closing brace
-    let braceCount = 1;
-    let index = 1;
-
-    while (braceCount > 0 && index < trimmed.length) {
-      if (trimmed[index] === '{') braceCount++;
-      if (trimmed[index] === '}') braceCount--;
-      index++;
-    }
-
-    // If we found a matching closing brace, return everything up to that point
-    if (braceCount === 0) {
-      return trimmed.substring(0, index);
-    }
-  }
-  return trimmed;
-}
-
 function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState('');
@@ -167,11 +128,6 @@ function App() {
     messagesContainer?.addEventListener('scroll', handleScroll);
     return () => messagesContainer?.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
-
-  const openai = new OpenAI({
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true,
-  });
 
   const handleFileUpload = (
     base64File: string,
@@ -260,164 +216,11 @@ function App() {
       clearFile();
 
       if (model.stream) {
-        const streamResponse = stream as Stream<ChatCompletionChunk>;
-        let fullContent = '';
-        let toolCallInProgress = false;
-        const currentToolCall = {
-          name: '',
-          arguments: '',
-        };
-
-        // Stream the initial response normally
-        for await (const chunk of streamResponse) {
-          // Handle tool calls
-          if (chunk.choices[0]?.delta?.tool_calls) {
-            toolCallInProgress = true;
-            const toolCall = chunk.choices[0].delta.tool_calls[0];
-
-            if (toolCall.function?.name) {
-              currentToolCall.name = toolCall.function.name;
-            }
-            if (toolCall.function?.arguments) {
-              currentToolCall.arguments += toolCall.function.arguments;
-
-              // Try to validate and fix JSON as it comes in
-              const sanitized = sanitizeJSONString(currentToolCall.arguments);
-              if (isValidJSON(sanitized)) {
-                currentToolCall.arguments = sanitized;
-              }
-            }
-          }
-
-          // Handle regular content
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            fullContent += content;
-            setMessages((prevMessages) => {
-              const newMessages = [...prevMessages];
-              newMessages[newMessages.length - 1].content = fullContent;
-              return newMessages;
-            });
-          }
-
-          // Handle tool call completion
-          if (
-            chunk.choices[0]?.finish_reason === 'tool_calls' &&
-            toolCallInProgress
-          ) {
-            try {
-              let toolCallContent;
-
-              if (currentToolCall.name === 'web_browser') {
-                try {
-                  const sanitized = sanitizeJSONString(
-                    currentToolCall.arguments
-                  );
-                  if (!isValidJSON(sanitized)) {
-                    throw new Error('Invalid JSON in tool arguments');
-                  }
-                  const args = JSON.parse(sanitized);
-                  toolCallContent = `<tool>${currentToolCall.name}</tool>${args.url}`;
-                } catch (error) {
-                  console.error('Error parsing web_browser arguments:', error);
-                  toolCallContent = 'Error: Invalid tool arguments';
-                }
-              } else if (currentToolCall.name === 'wikipedia') {
-                try {
-                  const sanitized = sanitizeJSONString(
-                    currentToolCall.arguments
-                  );
-                  if (!isValidJSON(sanitized)) {
-                    throw new Error('Invalid JSON in tool arguments');
-                  }
-                  const args = JSON.parse(sanitized);
-                  toolCallContent = `<tool>${currentToolCall.name}</tool>${args.query}`;
-                } catch (error) {
-                  console.error('Error parsing wikipedia arguments:', error);
-                  toolCallContent = 'Error: Invalid tool arguments';
-                }
-              } else {
-                try {
-                  const sanitized = sanitizeJSONString(
-                    currentToolCall.arguments
-                  );
-                  if (!isValidJSON(sanitized)) {
-                    throw new Error('Invalid JSON in tool arguments');
-                  }
-                  toolCallContent = `<tool>${currentToolCall.name}</tool>${sanitized}`;
-                } catch (error) {
-                  console.error('Error parsing tool arguments:', error);
-                  toolCallContent = 'Error: Invalid tool arguments';
-                }
-              }
-
-              const processedContent = await processToolUsage(toolCallContent);
-
-              if (processedContent !== toolCallContent) {
-                // Special handling for chart_generator - pass directly to message content
-                if (currentToolCall.name === 'chart_generator') {
-                  setMessages((prevMessages) => {
-                    const newMessages = [...prevMessages];
-                    newMessages[newMessages.length - 1].content =
-                      processedContent;
-                    return newMessages;
-                  });
-                } else if (currentToolCall.name !== 'image_generator') {
-                  // For other tools, proceed with summarization
-                  const summaryStream = await openai.chat.completions.create({
-                    messages: [
-                      {
-                        role: 'system',
-                        content: secondStreamPrompt,
-                      },
-                      {
-                        role: 'user',
-                        content: processedContent,
-                      },
-                    ],
-                    model: model.name,
-                    stream: true,
-                  });
-
-                  let summary = '';
-                  for await (const summaryChunk of summaryStream) {
-                    const summaryContent =
-                      summaryChunk.choices[0]?.delta?.content || '';
-                    summary += summaryContent;
-
-                    setMessages((prevMessages) => {
-                      const newMessages = [...prevMessages];
-                      newMessages[newMessages.length - 1].content = summary;
-                      return newMessages;
-                    });
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('Error processing tool call:', error);
-              setMessages((prevMessages) => {
-                const newMessages = [...prevMessages];
-                newMessages[newMessages.length - 1].content =
-                  'Error processing tool response';
-                return newMessages;
-              });
-            }
-          }
-
-          // Add this check for final message without tool calls
-          if (
-            chunk.choices[0]?.finish_reason === 'stop' &&
-            !toolCallInProgress &&
-            !fullContent
-          ) {
-            setMessages((prevMessages) => {
-              const newMessages = [...prevMessages];
-              newMessages[newMessages.length - 1].content =
-                "I apologize, but I couldn't generate a response. Please try again.";
-              return newMessages;
-            });
-          }
-        }
+        await runFirstStream(
+          model,
+          stream as Stream<ChatCompletionChunk>,
+          setMessages
+        );
       } else {
         const response = stream as OpenAI.Chat.ChatCompletion;
         let content = response.choices[0]?.message?.content || '';
@@ -512,7 +315,7 @@ function App() {
           {currentFileName && (
             <div className="image-preview">
               {currentFileType?.startsWith('image') ? (
-                <img src={currentFile} alt="Upload preview" />
+                <img src={currentFile || ''} alt="Upload preview" />
               ) : (
                 <div className="file-preview">📄 {currentFileName}</div>
               )}
