@@ -1,6 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
@@ -18,6 +23,9 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Serve static frontend files
+app.use(express.static(path.join(__dirname, '../frontend')));
+
 app.post('/api/chat', async (req, res) => {
   const { messages, modelName } = req.body;
 
@@ -28,7 +36,8 @@ app.post('/api/chat', async (req, res) => {
 
   try {
     const model = models.find((m) => m.name === modelName);
-    const client = model?.client === 'gemini' ? gemini : openai;
+    const isGemini = model?.client === 'gemini';
+    const client = isGemini ? gemini : openai;
     if (!model) {
       throw new Error('Invalid model name');
     }
@@ -74,6 +83,11 @@ app.post('/api/chat', async (req, res) => {
     );
     res.end();
   }
+});
+
+// Handle all other routes by serving the frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 const PORT = process.env.PORT || 3000;

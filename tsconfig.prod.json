@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "noEmit": false,
+    "resolveJsonModule": true,
+    "strict": false
+  },
+  "include": ["backend/**/*", "shared/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

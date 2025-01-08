@@ -179,6 +179,8 @@ function App() {
         role: 'assistant',
         content: '',
       };
+
+      const currentMessages = messages;
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
       const response = await fetch('http://localhost:3000/api/chat', {
@@ -187,7 +189,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: [...currentMessages, userMessage],
           modelName: model.name,
         }),
       });

@@ -20,6 +20,7 @@ export default defineConfig({
     port: 5173,
   },
   build: {
+    outDir: 'dist/frontend',
     rollupOptions: {
       external: [
         /^backend\/.*/, // Prevents importing from backend directory
