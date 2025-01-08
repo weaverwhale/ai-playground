@@ -51,8 +51,7 @@ app.post('/api/chat', async (req, res) => {
       ] as ChatCompletionMessageParam[],
       model: model.name,
       stream: model.stream,
-      tools,
-      tool_choice: 'auto',
+      ...(model.tools ? { tools, tool_choice: 'auto' } : {}),
     });
 
     if (model.stream) {
