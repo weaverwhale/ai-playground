@@ -1,7 +1,6 @@
 import React, { RefObject } from 'react';
-import { ExtendedChatCompletionMessageParam } from '../utils';
+import { ExtendedChatCompletionMessageParam, Model } from '../../shared/types';
 import { FileUpload } from './FileUpload';
-import { Model } from '../constants';
 
 interface ChatFormProps {
   prompt: string;
