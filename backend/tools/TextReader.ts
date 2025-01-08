@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { Tool } from './Tool';
 import OpenAI from 'openai';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Define your text file URLs here
 const TEXT_URLS = [
@@ -131,8 +134,7 @@ const textStore = new TextStore();
 
 // Initialize the text store immediately
 const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 textStore
   .initialize(openai)

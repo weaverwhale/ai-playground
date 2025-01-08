@@ -1,18 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { marked } from 'marked';
-import { Stream } from 'openai/streaming.mjs';
-import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
-import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
-import { OpenAI } from 'openai';
 import mermaid from 'mermaid';
 
-import { models, systemPrompt } from './constants';
-import {
-  processToolUsage,
-  ExtendedChatCompletionMessageParam,
-  runFirstStream,
-} from './utils';
-import { tools } from './tools';
+import { models } from '../shared/constants';
+import { ExtendedChatCompletionMessageParam } from '../shared/types';
 
 import { ThemeToggle } from './components/ThemeToggle';
 import { ChatForm } from './components/ChatForm';
@@ -188,52 +179,82 @@ function App() {
         role: 'assistant',
         content: '',
       };
+
+      const currentMessages = messages;
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
-      const stream = await model.client.chat.completions.create({
-        messages: [
-          ...(model.stream
-            ? [
-                {
-                  role: 'system',
-                  content: systemPrompt,
-                },
-              ]
-            : [
-                {
-                  role: 'user',
-                  content: systemPrompt,
-                },
-              ]),
-          ...messages,
-          userMessage,
-        ] as ChatCompletionMessageParam[],
-        model: model.name,
-        stream: model.stream,
-        tools,
-        tool_choice: 'auto',
+      const response = await fetch('http://localhost:3000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...currentMessages, userMessage],
+          modelName: model.name,
+        }),
       });
 
       clearFile();
 
-      if (model.stream) {
-        await runFirstStream(
-          model,
-          stream as Stream<ChatCompletionChunk>,
-          setMessages
-        );
-      } else {
-        const response = stream as OpenAI.Chat.ChatCompletion;
-        let content = response.choices[0]?.message?.content || '';
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
 
-        // Process any tool usage in the complete response
-        content = await processToolUsage(content);
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
 
-        setMessages((prevMessages) => {
-          const newMessages = [...prevMessages];
-          newMessages[newMessages.length - 1].content = content;
-          return newMessages;
-        });
+      const decoder = new TextDecoder();
+      let content = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') break;
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.type === 'content') {
+                content += parsed.content;
+                setMessages((prevMessages) => {
+                  const newMessages = [...prevMessages];
+                  newMessages[newMessages.length - 1].content = content;
+                  return newMessages;
+                });
+              } else if (parsed.type === 'tool_call') {
+                const toolCall = parsed.tool_call;
+                setMessages((prevMessages) => {
+                  const newMessages = [...prevMessages];
+                  const lastMessage = newMessages[newMessages.length - 1];
+
+                  // Only show "Using tool" message once
+                  if (
+                    toolCall.function?.name &&
+                    typeof lastMessage.content === 'string'
+                  ) {
+                    lastMessage.content = lastMessage.content || '';
+                    if (
+                      !lastMessage.content.includes(
+                        `Using tool: ${toolCall.function.name}`
+                      )
+                    ) {
+                      lastMessage.content = `Using tool: ${toolCall.function.name}\n\n`;
+                    }
+                  }
+                  return newMessages;
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error:', error);

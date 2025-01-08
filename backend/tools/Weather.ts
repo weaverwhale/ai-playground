@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { Tool } from './Tool';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 function createWeather() {
   const paramsSchema = z.object({
@@ -12,7 +15,7 @@ function createWeather() {
     'Useful for getting current weather information for a location',
     async ({ location }) => {
       console.log('Getting weather for:', location);
-      const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
+      const API_KEY = process.env.WEATHER_API_KEY;
       const url = `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${API_KEY}&units=metric`;
 
       try {
