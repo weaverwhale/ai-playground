@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { Tool } from './Tool';
 import OpenAI from 'openai';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 function createImageGenerator() {
   const paramsSchema = z.object({
@@ -15,7 +18,7 @@ function createImageGenerator() {
     async ({ prompt, size }) => {
       console.log('Generating image for:', prompt, 'with size', size);
       const openai = new OpenAI({
-        apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+        apiKey: process.env.OPENAI_API_KEY,
         dangerouslyAllowBrowser: true,
       });
 

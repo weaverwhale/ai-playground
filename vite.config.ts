@@ -11,4 +11,19 @@ export default defineConfig({
       },
     },
   },
+  resolve: {
+    alias: {
+      '@shared': '/src/shared',
+    },
+  },
+  server: {
+    port: 5173,
+  },
+  build: {
+    rollupOptions: {
+      external: [
+        /^backend\/.*/, // Prevents importing from backend directory
+      ],
+    },
+  },
 });

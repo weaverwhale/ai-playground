@@ -1,39 +1,36 @@
 import { rawTools } from './tools';
-import { openai } from './clients/openai';
-// import { gemini } from './clients/gemini';
 
 export const models = [
   {
     name: 'gpt-4o-mini',
     label: 'GPT-4o Mini',
     stream: true,
-    client: openai,
+    client: 'openai',
   },
   {
     name: 'gpt-4o',
     label: 'GPT-4o',
     stream: true,
-    client: openai,
+    client: 'openai',
   },
   {
     name: 'o1-mini',
     label: 'o1 Mini',
     stream: false,
-    client: openai,
+    client: 'openai',
   },
   {
     name: 'o1-preview',
     label: 'o1 Preview',
     stream: false,
-    client: openai,
+    client: 'openai',
   },
-  // CORS issues with Gemini
-  // {
-  //   name: 'gemini-1.5-flash',
-  //   label: 'Gemini 1.5 Flash',
-  //   stream: true,
-  //   client: gemini,
-  // },
+  {
+    name: 'gemini-1.5-flash',
+    label: 'Gemini 1.5 Flash',
+    stream: true,
+    client: 'gemini',
+  },
 ];
 
 export type Model = (typeof models)[number];

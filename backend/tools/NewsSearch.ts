@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { Tool } from './Tool';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 type Article = {
   title: string;
@@ -19,7 +22,7 @@ function createNewsSearch() {
     'Useful for finding recent news articles on specific topics',
     async ({ query, days }) => {
       console.log('Searching news for:', query, 'over the last', days, 'days');
-      const API_KEY = import.meta.env.VITE_NEWS_API_KEY;
+      const API_KEY = process.env.NEWS_API_KEY;
       const date = new Date();
       date.setDate(date.getDate() - days);
       const fromDate = date.toISOString().split('T')[0];

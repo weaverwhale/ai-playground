@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { Tool } from './Tool';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // GitHub API Response Interfaces
 interface GitHubUser {
@@ -185,10 +188,10 @@ function createGitHubReview() {
     'Useful for reviewing GitHub Pull Requests or Commits and providing detailed analysis',
     async ({ url }) => {
       console.log('Reviewing GitHub URL:', url);
-      const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
+      const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
       if (!GITHUB_TOKEN) {
         throw new Error(
-          'GitHub token is required. Please set VITE_GITHUB_TOKEN in your environment variables.'
+          'GitHub token is required. Please set GITHUB_TOKEN in your environment variables.'
         );
       }
       const { owner, repo, type, identifier } = parseGitHubUrl(url);

@@ -164,7 +164,7 @@
   border-radius: $border-radius;
   display: flex;
   align-items: flex-start;
-  background-color: $color-light-gray;
+  background-color: var(--color-button-bg);
   gap: $spacing-small;
 
   img {
