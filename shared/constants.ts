@@ -27,13 +27,13 @@ export const models = [
     tools: false,
     client: 'openai',
   },
-  {
-    name: 'gemini-1.5-flash',
-    label: 'Gemini 1.5 Flash',
-    stream: true,
-    tools: true,
-    client: 'gemini',
-  },
+  // {
+  //   name: 'gemini-1.5-flash',
+  //   label: 'Gemini 1.5 Flash',
+  //   stream: true,
+  //   tools: true,
+  //   client: 'gemini',
+  // },
   {
     name: 'gemini-2.0-flash-exp',
     label: 'Gemini 2.0 Exp',
