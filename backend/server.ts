@@ -8,39 +8,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import OpenAI from 'openai';
-import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
-import { Stream } from 'openai/streaming.mjs';
-import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
+import {
+  ChatCompletionMessageParam,
+  ChatCompletionChunk,
+} from 'openai/resources/chat/completions';
+import { Stream } from 'openai/streaming';
 
 import { openai } from './clients/openai';
 import { gemini } from './clients/gemini';
 import { models } from '../shared/constants';
 import { systemPrompt } from './constants';
-import { processToolUsage, runFirstStream } from './utils';
+import {
+  processToolUsage,
+  runFirstStream,
+  transformMessagesForGemini,
+  formatToolsForGemini,
+} from './utils';
 import { tools } from './tools';
-
-function transformMessagesForGemini(messages: ChatCompletionMessageParam[]) {
-  return messages.map((message) => {
-    if (Array.isArray(message.content)) {
-      // Transform array content to string
-      return {
-        ...message,
-        content: message.content
-          .map((content) => {
-            if (content.type === 'text') {
-              return content.text;
-            }
-            if (content.type === 'image_url') {
-              return `[Image: ${content.image_url.url}]`;
-            }
-            return '';
-          })
-          .join('\n'),
-      };
-    }
-    return message;
-  });
-}
 
 const app = express();
 app.use(cors());
@@ -65,6 +49,8 @@ app.post('/api/chat', async (req, res) => {
       throw new Error('Invalid model name');
     }
 
+    const formattedTools = isGemini ? formatToolsForGemini(tools) : tools;
+
     const stream = await client.chat.completions.create({
       messages: [
         ...(model.stream
@@ -74,7 +60,12 @@ app.post('/api/chat', async (req, res) => {
       ] as ChatCompletionMessageParam[],
       model: model.name,
       stream: model.stream,
-      ...(model.tools ? { tools, tool_choice: 'auto' } : {}),
+      ...(model.tools
+        ? {
+            tools: formattedTools,
+            tool_choice: 'auto',
+          }
+        : {}),
     });
 
     if (model.stream) {

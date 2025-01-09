@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { Response } from 'express';
-import { ChatCompletionChunk } from 'openai/resources/chat/completions.mjs';
-import { Stream } from 'openai/streaming.mjs';
+import {
+  ChatCompletionMessageParam,
+  ChatCompletionChunk,
+} from 'openai/resources/chat/completions';
+import { Stream } from 'openai/streaming';
 import { Model } from '../shared/types';
 import { gemini } from './clients/gemini';
 import { openai } from './clients/openai';
@@ -305,4 +308,46 @@ export async function runSecondStream(
       );
     }
   }
+}
+
+export function transformMessagesForGemini(
+  messages: ChatCompletionMessageParam[]
+) {
+  return messages.map((message) => {
+    if (Array.isArray(message.content)) {
+      // Transform array content to string
+      return {
+        ...message,
+        content: message.content
+          .map((content) => {
+            if (content.type === 'text') {
+              return content.text;
+            }
+            if (content.type === 'image_url') {
+              return `[Image: ${content.image_url.url}]`;
+            }
+            return '';
+          })
+          .join('\n'),
+      };
+    }
+    return message;
+  });
+}
+
+export function formatToolsForGemini(tools) {
+  return [];
+
+  return tools.map((tool) => ({
+    type: 'function',
+    function: {
+      name: tool.function.name,
+      description: tool.function.description,
+      parameters: {
+        type: 'object',
+        properties: tool.function.parameters.properties,
+        required: tool.function.parameters.required || [],
+      },
+    },
+  }));
 }
