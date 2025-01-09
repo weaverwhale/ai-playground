@@ -260,10 +260,11 @@ export async function runFirstStream(
           })}\n\n`
         );
 
-        // Only run second stream for non-image/chart tools
+        // Only run second stream for non-image/chart/moby tools
         if (
           currentToolCall.name !== 'image_generator' &&
-          currentToolCall.name !== 'chart_generator'
+          currentToolCall.name !== 'chart_generator' &&
+          currentToolCall.name !== 'moby'
         ) {
           await runSecondStream(model, processedContent, res);
         }
