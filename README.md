@@ -14,4 +14,4 @@
 ## @TODO
 
 - Prod build
-- Fix gemini
+- Fix gemini tools

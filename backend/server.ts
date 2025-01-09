@@ -19,6 +19,29 @@ import { systemPrompt } from './constants';
 import { processToolUsage, runFirstStream } from './utils';
 import { tools } from './tools';
 
+function transformMessagesForGemini(messages: ChatCompletionMessageParam[]) {
+  return messages.map((message) => {
+    if (Array.isArray(message.content)) {
+      // Transform array content to string
+      return {
+        ...message,
+        content: message.content
+          .map((content) => {
+            if (content.type === 'text') {
+              return content.text;
+            }
+            if (content.type === 'image_url') {
+              return `[Image: ${content.image_url.url}]`;
+            }
+            return '';
+          })
+          .join('\n'),
+      };
+    }
+    return message;
+  });
+}
+
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
@@ -47,7 +70,7 @@ app.post('/api/chat', async (req, res) => {
         ...(model.stream
           ? [{ role: 'system', content: systemPrompt }]
           : [{ role: 'user', content: systemPrompt }]),
-        ...messages,
+        ...(isGemini ? transformMessagesForGemini(messages) : messages),
       ] as ChatCompletionMessageParam[],
       model: model.name,
       stream: model.stream,
