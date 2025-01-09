@@ -9,10 +9,11 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build:frontend": "vite build",
     "build:backend": "tsc -p tsconfig.prod.json",
-    "build": "npm run build:frontend && npm run build:backend",
+    "build": "npm run clean && npm run build:frontend && npm run build:backend",
     "lint": "eslint .",
-    "backend:serve": "node dist/backend/server.js",
-    "prod": "npm run build && npm run backend:serve"
+    "backend:serve": "tsx dist/backend/server.js",
+    "prod": "npm run build && npm run backend:serve",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "body-parser": "^1.20.3",
