@@ -211,6 +211,7 @@ export async function runFirstStream(
   res: Response
 ) {
   let toolCallInProgress = false;
+  let toolCallProcessed = false;
   const currentToolCall = {
     name: '',
     arguments: '',
@@ -241,9 +242,12 @@ export async function runFirstStream(
 
     // Handle tool call completion
     if (
-      chunk.choices[0]?.finish_reason === 'tool_calls' &&
-      toolCallInProgress
+      (chunk.choices[0]?.finish_reason === 'tool_calls' ||
+        (model.client === 'gemini' && toolCallInProgress)) &&
+      !toolCallProcessed
     ) {
+      toolCallProcessed = true;
+
       try {
         const toolCallContent = await handleToolCallContent(currentToolCall);
         const processedContent = await processToolUsage(toolCallContent);
