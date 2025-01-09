@@ -46,7 +46,9 @@ function createMoby() {
             body: JSON.stringify({
               stream: false,
               shopId: shopId,
+              conversationId: (parentMessageId || uuidV4()).toString(),
               messageId: (parentMessageId || uuidV4()).toString(),
+              userId: 'external-api-user',
               question: question,
             }),
           }
