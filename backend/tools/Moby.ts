@@ -28,10 +28,11 @@ function createMoby() {
     'Useful for getting e-commerce analytics and insights from Triple Whale Moby',
     async ({ question, shopId, parentMessageId }) => {
       console.log('Asking Moby:', question);
-      const TW_TOKEN = process.env.TW_TOKEN;
 
-      if (!TW_TOKEN) {
-        return 'Error: Triple Whale API token not configured';
+      const TW_TOKEN = process.env.TW_TOKEN;
+      const TW_BEARER_TOKEN = process.env.TW_BEARER_TOKEN;
+      if (!TW_BEARER_TOKEN && !TW_TOKEN) {
+        return 'Error: Triple Whale token not configured. ';
       }
 
       try {
@@ -41,15 +42,18 @@ function createMoby() {
             method: 'POST',
             headers: {
               'content-type': 'application/json',
-              'x-api-key': TW_TOKEN,
+              ...(TW_BEARER_TOKEN
+                ? { Authorization: `Bearer ${TW_BEARER_TOKEN}` }
+                : { 'x-api-key': TW_TOKEN || '' }),
             },
             body: JSON.stringify({
               stream: false,
               shopId: shopId,
               conversationId: (parentMessageId || uuidV4()).toString(),
-              messageId: (parentMessageId || uuidV4()).toString(),
+              source: 'chat',
               userId: 'external-api-user',
               question: question,
+              query: question,
             }),
           }
         );
@@ -59,7 +63,9 @@ function createMoby() {
         }
 
         const data = await response.json();
-        return data.answer || 'No answer received from Moby. ';
+        const lastMessageText =
+          data.messages?.[data.messages.length - 1]?.text + ' ';
+        return lastMessageText || 'No answer received from Moby. ';
       } catch (error) {
         console.error('Error querying Moby:', error);
         return 'Error: Could not fetch response from Triple Whale. ';
