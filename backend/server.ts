@@ -22,9 +22,8 @@ import {
   processToolUsage,
   runFirstStream,
   transformMessagesForGemini,
-  formatToolsForGemini,
 } from './utils';
-import { tools } from './tools';
+import { tools, geminiTools } from './tools';
 
 const app = express();
 app.use(cors());
@@ -49,8 +48,8 @@ app.post('/api/chat', async (req, res) => {
       throw new Error('Invalid model name');
     }
 
-    const formattedTools = isGemini ? formatToolsForGemini(tools) : tools;
-
+    const formattedTools = isGemini ? geminiTools : tools;
+    console.log('formattedTools', JSON.stringify(formattedTools, null, 2));
     const stream = await client.chat.completions.create({
       messages: [
         ...(model.stream

@@ -334,20 +334,3 @@ export function transformMessagesForGemini(
     return message;
   });
 }
-
-export function formatToolsForGemini(tools) {
-  return [];
-
-  return tools.map((tool) => ({
-    type: 'function',
-    function: {
-      name: tool.function.name,
-      description: tool.function.description,
-      parameters: {
-        type: 'object',
-        properties: tool.function.parameters.properties,
-        required: tool.function.parameters.required || [],
-      },
-    },
-  }));
-}

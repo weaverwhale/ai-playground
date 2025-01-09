@@ -38,4 +38,29 @@ const tools: ChatCompletionTool[] = rawTools.map((tool) => ({
   },
 }));
 
-export { rawTools, tools };
+const geminiRawTools = [
+  createWebBrowser(),
+  createWikipedia(),
+  createCalculator(),
+  createImageGenerator(),
+  createGitHubReview(),
+  createUrbanDictionary(),
+  createForecast(),
+  // @TODO CHART GENERATOR CAUSES ERRORS??
+  // createChartGenerator(),
+  // createTextReader(),
+  // createWeather(),
+  // createTranslator(),
+  // createNewsSearch(),
+];
+
+const geminiTools = geminiRawTools.map((tool) => ({
+  type: 'function' as const,
+  function: {
+    name: tool.name,
+    description: tool.description,
+    parameters: zodToJsonSchema(tool.schema),
+  },
+}));
+
+export { rawTools, tools, geminiTools };
