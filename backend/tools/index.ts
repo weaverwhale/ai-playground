@@ -9,6 +9,7 @@ import { createGitHubReview } from './GitHubReview';
 import { createUrbanDictionary } from './UrbanDictionary';
 import { createForecast } from './Forecast';
 import { createChartGenerator } from './ChartGenerator';
+import { createMoby } from './Moby';
 // import { createTextReader } from './TextReader';
 // import { createWeather } from './Weather';
 // import { createTranslator } from './Translator';
@@ -23,6 +24,7 @@ const rawTools = [
   createUrbanDictionary(),
   createForecast(),
   createChartGenerator(),
+  createMoby(),
   // createTextReader(),
   // createWeather(),
   // createTranslator(),
@@ -46,6 +48,7 @@ const geminiRawTools = [
   createGitHubReview(),
   createUrbanDictionary(),
   createForecast(),
+  createMoby(),
   // @TODO CHART GENERATOR CAUSES ERRORS??
   // createChartGenerator(),
   // createTextReader(),

@@ -49,7 +49,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const formattedTools = isGemini ? geminiTools : tools;
-    console.log('formattedTools', JSON.stringify(formattedTools, null, 2));
+
     const stream = await client.chat.completions.create({
       messages: [
         ...(model.stream
