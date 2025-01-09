@@ -227,6 +227,12 @@ function App() {
                   newMessages[newMessages.length - 1].content = content;
                   return newMessages;
                 });
+              } else if (parsed.type === 'error') {
+                setMessages((prevMessages) => {
+                  const newMessages = [...prevMessages];
+                  newMessages[newMessages.length - 1].content = parsed.content;
+                  return newMessages;
+                });
               } else if (parsed.type === 'tool_call') {
                 const toolCall = parsed.tool_call;
                 setMessages((prevMessages) => {

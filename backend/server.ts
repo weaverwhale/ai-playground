@@ -55,12 +55,34 @@ app.post('/api/chat', async (req, res) => {
     });
 
     if (model.stream) {
-      await runFirstStream(model, stream as Stream<ChatCompletionChunk>, res);
+      try {
+        await runFirstStream(model, stream as Stream<ChatCompletionChunk>, res);
+      } catch (streamError) {
+        // Handle streaming errors
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'error',
+            content: `Error during streaming: ${streamError.message || 'Unknown streaming error'}`,
+          })}\n\n`
+        );
+      }
     } else {
       // Handle non-streaming response
       const response = stream as OpenAI.Chat.Completions.ChatCompletion;
       let content = response.choices[0]?.message?.content || '';
-      content = await processToolUsage(content);
+      try {
+        content = await processToolUsage(content);
+      } catch (toolError) {
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'error',
+            content: `Error processing tool: ${toolError.message || 'Unknown tool error'}`,
+          })}\n\n`
+        );
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+      }
 
       res.write(
         `data: ${JSON.stringify({
@@ -74,12 +96,14 @@ app.post('/api/chat', async (req, res) => {
     res.end();
   } catch (error) {
     console.error('Error:', error);
+    // Send a more detailed error message to the client
     res.write(
       `data: ${JSON.stringify({
         type: 'error',
-        content: 'Error: Something went wrong. Please try again.',
+        content: `Error: ${error.message || 'Something went wrong. Please try again.'}`,
       })}\n\n`
     );
+    res.write('data: [DONE]\n\n');
     res.end();
   }
 });
