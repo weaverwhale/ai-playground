@@ -57,10 +57,10 @@ function createMoby() {
         }
 
         const data = await response.json();
-        return data.answer || 'No answer received from Moby';
+        return data.answer || 'No answer received from Moby. ';
       } catch (error) {
         console.error('Error querying Moby:', error);
-        return 'Error: Could not fetch response from Triple Whale';
+        return 'Error: Could not fetch response from Triple Whale. ';
       }
     }
   );
