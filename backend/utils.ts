@@ -290,7 +290,7 @@ export async function runSecondStream(
   const summaryStream = await client.chat.completions.create({
     messages: [
       {
-        role: 'system',
+        role: model.agent,
         content: secondStreamPrompt,
       },
       {

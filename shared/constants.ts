@@ -5,6 +5,7 @@ export const models = [
     stream: true,
     tools: true,
     client: 'openai',
+    agent: 'system',
   },
   {
     name: 'gpt-4o',
@@ -12,35 +13,30 @@ export const models = [
     stream: true,
     tools: true,
     client: 'openai',
+    agent: 'system',
   },
   {
     name: 'o1-mini',
     label: 'o1 Mini',
-    stream: false,
+    stream: true,
     tools: false,
     client: 'openai',
+    agent: 'assistant',
   },
   {
     name: 'o1-preview',
     label: 'o1 Preview',
-    stream: false,
+    stream: true,
     tools: false,
     client: 'openai',
+    agent: 'assistant',
   },
-  // {
-  //   name: 'gemini-1.5-flash',
-  //   label: 'Gemini 1.5 Flash',
-  //   stream: true,
-  //   tools: true,
-  //   client: 'gemini',
-  // },
   {
     name: 'gemini-2.0-flash-exp',
     label: 'Gemini 2.0 Exp',
     stream: true,
     tools: true,
     client: 'gemini',
+    agent: 'system',
   },
 ];
-
-export type Model = (typeof models)[number];

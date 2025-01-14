@@ -44,6 +44,7 @@ app.post('/api/chat', async (req, res) => {
     const model = models.find((m) => m.name === modelName);
     const isGemini = model?.client === 'gemini';
     const client = isGemini ? gemini : openai;
+    const agent = model?.agent;
     if (!model) {
       throw new Error('Invalid model name');
     }
@@ -53,7 +54,7 @@ app.post('/api/chat', async (req, res) => {
     const stream = await client.chat.completions.create({
       messages: [
         ...(model.stream
-          ? [{ role: 'system', content: systemPrompt }]
+          ? [{ role: agent, content: systemPrompt }]
           : [{ role: 'user', content: systemPrompt }]),
         ...(isGemini ? transformMessagesForGemini(messages) : messages),
       ] as ChatCompletionMessageParam[],

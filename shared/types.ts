@@ -1,3 +1,5 @@
+import { models } from './constants';
+
 export interface ExtendedChatCompletionMessageParam {
   role: 'system' | 'user' | 'assistant' | 'function';
   content:
@@ -10,9 +12,6 @@ export interface ExtendedChatCompletionMessageParam {
   };
 }
 
-export interface Model {
-  name: string;
-  label: string;
-  stream: boolean;
-  client: string;
-}
+export type Model = (typeof models)[number] & {
+  agent: 'system' | 'assistant';
+};
