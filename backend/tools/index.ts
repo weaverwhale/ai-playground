@@ -1,6 +1,7 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ChatCompletionTool } from 'openai/resources/chat/completions';
 
+import { Tool } from './Tool';
 import { createWebBrowser } from './WebBrowser';
 import { createWikipedia } from './Wikipedia';
 import { createCalculator } from './Calculator';
@@ -66,4 +67,4 @@ const geminiTools = geminiRawTools.map((tool) => ({
   },
 }));
 
-export { rawTools, tools, geminiTools };
+export { Tool, rawTools, tools, geminiTools };

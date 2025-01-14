@@ -1,16 +1,14 @@
 import { z } from 'zod';
 import { Response } from 'express';
-import {
-  ChatCompletionMessageParam,
-  ChatCompletionChunk,
-} from 'openai/resources/chat/completions';
-import { Stream } from 'openai/streaming';
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+
 import { Model } from '../shared/types';
 import { gemini } from './clients/gemini';
 import { openai } from './clients/openai';
 import { secondStreamPrompt } from './constants';
-import { Tool } from './tools/Tool';
-import { rawTools } from './tools';
+import { Tool, tools, rawTools, geminiTools } from './tools';
+import { models } from '../shared/constants';
+import { systemPrompt } from './constants';
 
 export async function processToolUsage(content: string): Promise<string> {
   let processedContent = content;
@@ -206,10 +204,35 @@ export async function handleToolCallContent(currentToolCall: ToolCall) {
 }
 
 export async function runFirstStream(
-  model: Model,
-  stream: Stream<ChatCompletionChunk>,
+  modelName: string,
+  messages: ChatCompletionMessageParam[],
   res: Response
 ) {
+  const model = models.find((m) => m.name === modelName) as Model;
+  if (!model) {
+    throw new Error('Invalid model name');
+  }
+
+  const isGemini = model.client === 'gemini';
+  const client = isGemini ? gemini : openai;
+  const agent = model.agent;
+  const formattedTools = isGemini ? geminiTools : tools;
+
+  const stream = await client.chat.completions.create({
+    messages: [
+      { role: agent, content: systemPrompt },
+      ...(isGemini ? transformMessagesForGemini(messages) : messages),
+    ] as ChatCompletionMessageParam[],
+    model: model.name,
+    stream: true,
+    ...(model.tools
+      ? {
+          tools: formattedTools,
+          tool_choice: 'auto',
+        }
+      : {}),
+  });
+
   let toolCallInProgress = false;
   let toolCallProcessed = false;
   const currentToolCall = {

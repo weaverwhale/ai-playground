@@ -2,7 +2,6 @@ export const models = [
   {
     name: 'gpt-4o-mini',
     label: 'GPT-4o Mini',
-    stream: true,
     tools: true,
     client: 'openai',
     agent: 'system',
@@ -10,7 +9,6 @@ export const models = [
   {
     name: 'gpt-4o',
     label: 'GPT-4o',
-    stream: true,
     tools: true,
     client: 'openai',
     agent: 'system',
@@ -18,7 +16,6 @@ export const models = [
   {
     name: 'o1-mini',
     label: 'o1 Mini',
-    stream: true,
     tools: false,
     client: 'openai',
     agent: 'assistant',
@@ -26,7 +23,6 @@ export const models = [
   {
     name: 'o1-preview',
     label: 'o1 Preview',
-    stream: true,
     tools: false,
     client: 'openai',
     agent: 'assistant',
@@ -34,7 +30,6 @@ export const models = [
   {
     name: 'gemini-2.0-flash-exp',
     label: 'Gemini 2.0 Exp',
-    stream: true,
     tools: true,
     client: 'gemini',
     agent: 'system',
