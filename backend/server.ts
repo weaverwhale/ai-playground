@@ -10,7 +10,11 @@ const __dirname = path.dirname(__filename);
 import { runFirstStream } from './utils';
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: '*',
+  })
+);
 app.use(bodyParser.json());
 
 // Serve static frontend files
@@ -49,6 +53,10 @@ app.post('/api/chat', async (req, res) => {
     res.write('data: [DONE]\n\n');
     res.end();
   }
+});
+
+app.get('/healthcheck', (_, res) => {
+  res.sendStatus(200);
 });
 
 // Handle all other routes by serving the frontend
