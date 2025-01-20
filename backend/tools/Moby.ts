@@ -48,7 +48,7 @@ function createMoby() {
             },
             body: JSON.stringify({
               stream: false,
-              shopId: shopId || 'madisonbraids.myshopify.com',
+              shopId: shopId,
               conversationId: (parentMessageId || uuidV4()).toString(),
               source: 'chat',
               userId: 'external-api-user',
@@ -65,6 +65,7 @@ function createMoby() {
         const data = await response.json();
         const lastMessageText =
           data.messages?.[data.messages.length - 1]?.text + ' ';
+
         return lastMessageText || 'No answer received from Moby. ';
       } catch (error) {
         console.error('Error querying Moby:', error);
