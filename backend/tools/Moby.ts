@@ -48,7 +48,7 @@ function createMoby() {
             },
             body: JSON.stringify({
               stream: false,
-              shopId: shopId,
+              shopId: shopId || 'madisonbraids.myshopify.com',
               conversationId: (parentMessageId || uuidV4()).toString(),
               source: 'chat',
               userId: 'external-api-user',
