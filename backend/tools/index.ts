@@ -51,7 +51,7 @@ const geminiRawTools = [
   createForecast(),
   createMoby(),
   // @TODO CHART GENERATOR CAUSES ERRORS??
-  // createChartGenerator(),
+  createChartGenerator(),
   // createTextReader(),
   // createWeather(),
   // createTranslator(),

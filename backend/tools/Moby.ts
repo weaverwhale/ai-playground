@@ -33,7 +33,7 @@ function createMoby() {
       const TW_BEARER_TOKEN = process.env.TW_BEARER_TOKEN;
       const IS_ON_VPN = process.env.IS_ON_VPN;
       if (!TW_BEARER_TOKEN && !TW_TOKEN && !IS_ON_VPN) {
-        return 'Error: Triple Whale token not configured. ';
+        return 'Error: Triple Whale token or VPN not configured. ';
       }
 
       try {
@@ -56,9 +56,10 @@ function createMoby() {
               shopId: shopId,
               conversationId: (parentMessageId || uuidV4()).toString(),
               source: 'chat',
-              userId: 'external-api-user',
+              userId: 'test-user',
               question: question,
               query: question,
+              generateInsights: true,
             }),
           }
         );
@@ -68,6 +69,9 @@ function createMoby() {
         }
 
         const data = await response.json();
+
+        console.log(data, null, 2);
+
         const lastMessageText =
           data.messages?.[data.messages.length - 1]?.text + ' ';
 
