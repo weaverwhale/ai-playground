@@ -9,15 +9,18 @@ import { dirname } from 'path';
 
 dotenv.config();
 
-// Add these lines near the top of the file after other imports
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Define your text file URLs here
-const TEXT_URLS = [
-  // { url: '/text/OnboardingGuide.txt', type: 'text' },
-  { url: '/text/OnboardingGuide.html', type: 'html' },
-];
+async function getTextFiles(): Promise<Array<{ url: string; type: string }>> {
+  const textDir = path.join(__dirname, '..', '..', 'text');
+  const files = await fs.readdir(textDir);
+
+  return files.map((file) => ({
+    url: `/text/${file}`,
+    type: file.endsWith('.html') ? 'html' : 'text',
+  }));
+}
 
 class TextStore {
   private documents: { text: string; embedding: number[]; source: string }[] =
@@ -28,9 +31,10 @@ class TextStore {
     if (this.initialized) return;
 
     try {
-      console.log(`Loading ${TEXT_URLS.length} files...`);
+      const files = await getTextFiles();
+      console.log(`Loading ${files.length} files...`);
 
-      for (const file of TEXT_URLS) {
+      for (const file of files) {
         const filePath = path.join(__dirname, '..', '..', file.url);
         const content = await fs.readFile(filePath, 'utf-8');
         const text = file.type === 'html' ? this.stripHtml(content) : content;
