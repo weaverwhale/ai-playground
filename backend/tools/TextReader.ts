@@ -2,13 +2,21 @@ import { z } from 'zod';
 import { Tool } from './Tool';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 dotenv.config();
 
+// Add these lines near the top of the file after other imports
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // Define your text file URLs here
 const TEXT_URLS = [
-  // { url: '/texts/OnboardingGuide.txt', type: 'text' },
-  { url: '/texts/OnboardingGuide.html', type: 'html' },
+  // { url: '/text/OnboardingGuide.txt', type: 'text' },
+  { url: '/text/OnboardingGuide.html', type: 'html' },
 ];
 
 class TextStore {
@@ -23,8 +31,8 @@ class TextStore {
       console.log(`Loading ${TEXT_URLS.length} files...`);
 
       for (const file of TEXT_URLS) {
-        const response = await fetch(file.url);
-        const content = await response.text();
+        const filePath = path.join(__dirname, '..', '..', file.url);
+        const content = await fs.readFile(filePath, 'utf-8');
         const text = file.type === 'html' ? this.stripHtml(content) : content;
         await this.processText(text, file.url, openai);
       }

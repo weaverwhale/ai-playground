@@ -69,9 +69,6 @@ function createMoby() {
         }
 
         const data = await response.json();
-
-        console.log(data, null, 2);
-
         const lastMessageText =
           data.messages?.[data.messages.length - 1]?.text + ' ';
 
