@@ -183,16 +183,19 @@ function App() {
       const currentMessages = messages;
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
-      const response = await fetch('http://localhost:3000/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [...currentMessages, userMessage],
-          modelName: model.name,
-        }),
-      });
+      const response = await fetch(
+        `http://localhost:${import.meta.env.VITE_SERVER_PORT}/api/chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: [...currentMessages, userMessage],
+            modelName: model.name,
+          }),
+        }
+      );
 
       clearFile();
 
