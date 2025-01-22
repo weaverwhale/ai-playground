@@ -48,6 +48,11 @@ button {
   &:focus-visible {
     outline: 4px auto -webkit-focus-ring-color;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 input {
