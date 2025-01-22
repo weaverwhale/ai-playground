@@ -34,4 +34,11 @@ export const models = [
     client: 'gemini',
     agent: 'system',
   },
+  {
+    name: 'deepseek-chat',
+    label: 'DeepSeek Chat',
+    tools: true,
+    client: 'deepseek',
+    agent: 'system',
+  },
 ];
