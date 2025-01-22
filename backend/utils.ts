@@ -204,6 +204,14 @@ export async function handleToolCallContent(currentToolCall: ToolCall) {
   return toolCallContent;
 }
 
+function generateModel(model: Model) {
+  const isGemini = model.client === 'gemini';
+  const isDeepSeek = model.client === 'deepseek';
+  const client = isGemini ? gemini : isDeepSeek ? deepseek : openai;
+
+  return { client, isGemini, isDeepSeek };
+}
+
 export async function runFirstStream(
   modelName: string,
   messages: ChatCompletionMessageParam[],
@@ -214,9 +222,7 @@ export async function runFirstStream(
     throw new Error('Invalid model name');
   }
 
-  const isGemini = model.client === 'gemini';
-  const isDeepSeek = model.client === 'deepseek';
-  const client = isGemini ? gemini : isDeepSeek ? deepseek : openai;
+  const { client, isGemini } = generateModel(model);
   const agent = model.agent;
   const formattedTools = isGemini ? geminiTools : tools;
 
@@ -311,7 +317,7 @@ export async function runSecondStream(
   processedContent: string,
   res: Response
 ) {
-  const client = model.client === 'gemini' ? gemini : openai;
+  const { client } = generateModel(model);
   const summaryStream = await client.chat.completions.create({
     messages: [
       {
