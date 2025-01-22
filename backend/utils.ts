@@ -6,10 +6,9 @@ import { Model } from '../shared/types';
 import { gemini } from './clients/gemini';
 import { openai } from './clients/openai';
 import { deepseek } from './clients/deepseek';
-import { secondStreamPrompt } from './constants';
+import { secondStreamPrompt, systemPrompt } from './constants';
 import { Tool, tools, rawTools, geminiTools } from './tools';
 import { models } from '../shared/constants';
-import { systemPrompt } from './constants';
 
 export async function processToolUsage(content: string): Promise<string> {
   let processedContent = content;
@@ -228,7 +227,7 @@ export async function runFirstStream(
 
   const stream = await client.chat.completions.create({
     messages: [
-      { role: agent, content: systemPrompt },
+      { role: agent, content: systemPrompt(model.tools) },
       ...(isGemini ? transformMessagesForGemini(messages) : messages),
     ] as ChatCompletionMessageParam[],
     model: model.name,
