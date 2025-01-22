@@ -105,6 +105,10 @@ function App() {
     });
   }, []);
 
+  const focusInput = () => {
+    inputRef.current?.focus();
+  };
+
   const scrollToBottom = useCallback(() => {
     if (autoScroll) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -113,6 +117,7 @@ function App() {
 
   useEffect(() => {
     scrollToBottom();
+    focusInput();
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
@@ -130,7 +135,7 @@ function App() {
     setCurrentFileName(fileName);
     setCurrentFileType(fileType);
     // focus the input
-    inputRef.current?.focus();
+    focusInput();
   };
 
   const clearFile = () => {
@@ -275,7 +280,7 @@ function App() {
       });
     } finally {
       setIsLoading(false);
-      inputRef.current?.focus();
+      focusInput();
     }
   }
 
