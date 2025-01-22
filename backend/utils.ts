@@ -5,6 +5,7 @@ import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { Model } from '../shared/types';
 import { gemini } from './clients/gemini';
 import { openai } from './clients/openai';
+import { deepseek } from './clients/deepseek';
 import { secondStreamPrompt } from './constants';
 import { Tool, tools, rawTools, geminiTools } from './tools';
 import { models } from '../shared/constants';
@@ -214,7 +215,8 @@ export async function runFirstStream(
   }
 
   const isGemini = model.client === 'gemini';
-  const client = isGemini ? gemini : openai;
+  const isDeepSeek = model.client === 'deepseek';
+  const client = isGemini ? gemini : isDeepSeek ? deepseek : openai;
   const agent = model.agent;
   const formattedTools = isGemini ? geminiTools : tools;
 
