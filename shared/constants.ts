@@ -35,6 +35,13 @@ export const models = [
     agent: 'system',
   },
   {
+    name: 'deepseek-reasoner',
+    label: 'DeepSeek Reasoner',
+    tools: false,
+    client: 'deepseek',
+    agent: 'system',
+  },
+  {
     name: 'deepseek-chat',
     label: 'DeepSeek Chat',
     tools: true,
