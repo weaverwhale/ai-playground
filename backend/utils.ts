@@ -6,6 +6,7 @@ import { Model } from '../shared/types';
 import { gemini } from './clients/gemini';
 import { openai } from './clients/openai';
 import { deepseek } from './clients/deepseek';
+import { anthropic } from './clients/anthropic';
 import { secondStreamPrompt, systemPrompt } from './constants';
 import { Tool, tools, rawTools, geminiTools } from './tools';
 import { models } from '../shared/constants';
@@ -203,24 +204,11 @@ export async function handleToolCallContent(currentToolCall: ToolCall) {
   return toolCallContent;
 }
 
-function generateModel(model: Model) {
-  const isGemini = model.client === 'gemini';
-  const isDeepSeek = model.client === 'deepseek';
-  const client = isGemini ? gemini : isDeepSeek ? deepseek : openai;
-
-  return { client, isGemini, isDeepSeek };
-}
-
-export async function runFirstStream(
-  modelName: string,
+async function handleOpenAiStream(
+  model: Model,
   messages: ChatCompletionMessageParam[],
   res: Response
 ) {
-  const model = models.find((m) => m.name === modelName) as Model;
-  if (!model) {
-    throw new Error('Invalid model name');
-  }
-
   const { client, isGemini } = generateModel(model);
   const agent = model.agent;
   const formattedTools = isGemini ? geminiTools : tools;
@@ -311,6 +299,88 @@ export async function runFirstStream(
   }
 }
 
+// currently not using tools
+async function handleAnthropicStream(
+  model: Model,
+  messages: ChatCompletionMessageParam[],
+  res: Response
+) {
+  const stream = await anthropic.messages.create({
+    model: model.name,
+    messages: messages.map((msg) => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: Array.isArray(msg.content)
+        ? msg.content.map((c) => (c.type === 'text' ? c.text : '')).join('\n')
+        : msg.content || '',
+    })),
+    max_tokens: 4096,
+    stream: true,
+  });
+
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta') {
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'content',
+          content: 'text' in chunk.delta ? chunk.delta.text : '',
+        })}\n\n`
+      );
+    }
+  }
+}
+
+function generateModel(model: Model) {
+  const isGemini = model.client === 'gemini';
+  const isDeepSeek = model.client === 'deepseek';
+  const client = isGemini ? gemini : isDeepSeek ? deepseek : openai;
+
+  return { client, isGemini, isDeepSeek };
+}
+
+export function transformMessagesForGemini(
+  messages: ChatCompletionMessageParam[]
+) {
+  return messages.map((message) => {
+    if (Array.isArray(message.content)) {
+      // Transform array content to string
+      return {
+        ...message,
+        content: message.content
+          .map((content) => {
+            if (content.type === 'text') {
+              return content.text;
+            }
+            if (content.type === 'image_url') {
+              return `[Image: ${content.image_url.url}]`;
+            }
+            return '';
+          })
+          .join('\n'),
+      };
+    }
+    return message;
+  });
+}
+
+// streams
+
+export async function runFirstStream(
+  modelName: string,
+  messages: ChatCompletionMessageParam[],
+  res: Response
+) {
+  const model = models.find((m) => m.name === modelName) as Model;
+  if (!model) {
+    throw new Error('Invalid model name');
+  }
+
+  if (model.client === 'anthropic') {
+    await handleAnthropicStream(model, messages, res);
+  } else {
+    await handleOpenAiStream(model, messages, res);
+  }
+}
+
 export async function runSecondStream(
   model: Model,
   processedContent: string,
@@ -343,29 +413,4 @@ export async function runSecondStream(
       );
     }
   }
-}
-
-export function transformMessagesForGemini(
-  messages: ChatCompletionMessageParam[]
-) {
-  return messages.map((message) => {
-    if (Array.isArray(message.content)) {
-      // Transform array content to string
-      return {
-        ...message,
-        content: message.content
-          .map((content) => {
-            if (content.type === 'text') {
-              return content.text;
-            }
-            if (content.type === 'image_url') {
-              return `[Image: ${content.image_url.url}]`;
-            }
-            return '';
-          })
-          .join('\n'),
-      };
-    }
-    return message;
-  });
 }

@@ -48,4 +48,11 @@ export const models = [
     client: 'deepseek',
     agent: 'system',
   },
+  {
+    name: 'claude-3-5-sonnet-latest',
+    label: 'Claude 3.5 Sonnet',
+    tools: false,
+    client: 'anthropic',
+    agent: 'assistant',
+  },
 ];
