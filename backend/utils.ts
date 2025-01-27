@@ -357,6 +357,35 @@ async function handleOpenAiStreamWithTools(
   }
 }
 
+async function handleAnthropicStream(
+  model: Model,
+  messages: ChatCompletionMessageParam[],
+  res: Response
+) {
+  const stream = await anthropic.messages.create({
+    model: model.name,
+    messages: messages.map((msg) => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: Array.isArray(msg.content)
+        ? msg.content.map((c) => (c.type === 'text' ? c.text : '')).join('\n')
+        : msg.content || '',
+    })),
+    max_tokens: 4096,
+    stream: true,
+  });
+
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta') {
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'content',
+          content: 'text' in chunk.delta ? chunk.delta.text : '',
+        })}\n\n`
+      );
+    }
+  }
+}
+
 async function handleAnthropicStreamWithTools(
   model: Model,
   messages: ChatCompletionMessageParam[],
@@ -401,12 +430,16 @@ async function handleAnthropicStreamWithTools(
     } else if (
       chunk.type === 'content_block_delta' &&
       'delta' in chunk &&
-      'input_json_delta' in chunk.delta
+      'input_json_delta' in chunk.delta &&
+      typeof chunk.delta.input_json_delta === 'object' &&
+      chunk.delta.input_json_delta &&
+      'partial_json' in chunk.delta.input_json_delta &&
+      typeof chunk.delta.input_json_delta.partial_json === 'string'
     ) {
       currentToolCall.arguments =
         currentToolCall.arguments.slice(0, -1) +
         (currentToolCall.arguments === '{}' ? '' : ',') +
-        chunk.delta.input_json_delta.partial_json.slice(1);
+        (chunk.delta.input_json_delta.partial_json as string).slice(1);
     } else if (
       chunk.type === 'message_delta' &&
       chunk.delta?.stop_reason === 'tool_use'
