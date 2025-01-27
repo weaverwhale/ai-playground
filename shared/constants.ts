@@ -51,7 +51,7 @@ export const models = [
   {
     name: 'claude-3-5-sonnet-latest',
     label: 'Claude 3.5 Sonnet',
-    tools: false,
+    tools: true,
     client: 'anthropic',
     agent: 'assistant',
   },

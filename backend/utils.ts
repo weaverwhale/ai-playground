@@ -204,7 +204,65 @@ export async function handleToolCallContent(currentToolCall: ToolCall) {
   return toolCallContent;
 }
 
+function generateModel(model: Model) {
+  const isGemini = model.client === 'gemini';
+  const isDeepSeek = model.client === 'deepseek';
+  const client = isGemini ? gemini : isDeepSeek ? deepseek : openai;
+
+  return { client, isGemini, isDeepSeek };
+}
+
+export function transformMessagesForGemini(
+  messages: ChatCompletionMessageParam[]
+) {
+  return messages.map((message) => {
+    if (Array.isArray(message.content)) {
+      // Transform array content to string
+      return {
+        ...message,
+        content: message.content
+          .map((content) => {
+            if (content.type === 'text') {
+              return content.text;
+            }
+            if (content.type === 'image_url') {
+              return `[Image: ${content.image_url.url}]`;
+            }
+            return '';
+          })
+          .join('\n'),
+      };
+    }
+    return message;
+  });
+}
+
 async function handleOpenAiStream(
+  model: Model,
+  messages: ChatCompletionMessageParam[],
+  res: Response
+) {
+  const { client } = generateModel(model);
+  const summaryStream = await client.chat.completions.create({
+    messages,
+    model: model.name,
+    stream: true,
+  });
+
+  for await (const chunk of summaryStream) {
+    const content = chunk.choices[0]?.delta?.content;
+    if (content) {
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'content',
+          content: content,
+        })}\n\n`
+      );
+    }
+  }
+}
+
+async function handleOpenAiStreamWithTools(
   model: Model,
   messages: ChatCompletionMessageParam[],
   res: Response
@@ -299,70 +357,101 @@ async function handleOpenAiStream(
   }
 }
 
-// currently not using tools
-async function handleAnthropicStream(
+async function handleAnthropicStreamWithTools(
   model: Model,
   messages: ChatCompletionMessageParam[],
   res: Response
 ) {
   const stream = await anthropic.messages.create({
     model: model.name,
-    messages: messages.map((msg) => ({
-      role: msg.role === 'user' ? 'user' : 'assistant',
-      content: Array.isArray(msg.content)
-        ? msg.content.map((c) => (c.type === 'text' ? c.text : '')).join('\n')
-        : msg.content || '',
-    })),
+    messages: messages
+      .filter((msg) => msg.role !== 'system')
+      .map((msg) => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: Array.isArray(msg.content)
+          ? msg.content.map((c) => (c.type === 'text' ? c.text : '')).join('\n')
+          : msg.content || '',
+      })),
     max_tokens: 4096,
     stream: true,
+    system: systemPrompt(model.tools),
+    tools: tools.map((tool) => ({
+      name: tool.function.name,
+      description: tool.function.description,
+      input_schema: {
+        type: 'object',
+        properties: tool.function.parameters?.properties || {},
+        required: tool.function.parameters?.required || [],
+      },
+    })),
   });
 
+  const currentToolCall = {
+    name: '',
+    arguments: '',
+  };
+
   for await (const chunk of stream) {
-    if (chunk.type === 'content_block_delta') {
+    if (
+      chunk.type === 'content_block_start' &&
+      chunk.content_block?.type === 'tool_use'
+    ) {
+      currentToolCall.name = chunk.content_block.name;
+      currentToolCall.arguments = '{}';
+    } else if (
+      chunk.type === 'content_block_delta' &&
+      'delta' in chunk &&
+      'input_json_delta' in chunk.delta
+    ) {
+      currentToolCall.arguments =
+        currentToolCall.arguments.slice(0, -1) +
+        (currentToolCall.arguments === '{}' ? '' : ',') +
+        chunk.delta.input_json_delta.partial_json.slice(1);
+    } else if (
+      chunk.type === 'message_delta' &&
+      chunk.delta?.stop_reason === 'tool_use'
+    ) {
+      try {
+        const toolCallContent = `<tool>${currentToolCall.name}</tool>${currentToolCall.arguments}`;
+        const processedContent = await processToolUsage(toolCallContent);
+
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'content',
+            content: processedContent,
+          })}\n\n`
+        );
+
+        if (
+          currentToolCall.name !== 'image_generator' &&
+          currentToolCall.name !== 'chart_generator' &&
+          currentToolCall.name !== 'moby'
+        ) {
+          await runSecondStream(model, processedContent, res);
+        }
+      } catch (error) {
+        console.error('Error processing tool call:', error);
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'error',
+            content: 'Error processing tool response',
+          })}\n\n`
+        );
+      }
+    } else if (
+      chunk.type === 'content_block_delta' &&
+      'delta' in chunk &&
+      'text' in chunk.delta
+    ) {
       res.write(
         `data: ${JSON.stringify({
           type: 'content',
-          content: 'text' in chunk.delta ? chunk.delta.text : '',
+          content: chunk.delta.text,
         })}\n\n`
       );
     }
   }
 }
-
-function generateModel(model: Model) {
-  const isGemini = model.client === 'gemini';
-  const isDeepSeek = model.client === 'deepseek';
-  const client = isGemini ? gemini : isDeepSeek ? deepseek : openai;
-
-  return { client, isGemini, isDeepSeek };
-}
-
-export function transformMessagesForGemini(
-  messages: ChatCompletionMessageParam[]
-) {
-  return messages.map((message) => {
-    if (Array.isArray(message.content)) {
-      // Transform array content to string
-      return {
-        ...message,
-        content: message.content
-          .map((content) => {
-            if (content.type === 'text') {
-              return content.text;
-            }
-            if (content.type === 'image_url') {
-              return `[Image: ${content.image_url.url}]`;
-            }
-            return '';
-          })
-          .join('\n'),
-      };
-    }
-    return message;
-  });
-}
-
-// streams
 
 export async function runFirstStream(
   modelName: string,
@@ -375,9 +464,9 @@ export async function runFirstStream(
   }
 
   if (model.client === 'anthropic') {
-    await handleAnthropicStream(model, messages, res);
+    await handleAnthropicStreamWithTools(model, messages, res);
   } else {
-    await handleOpenAiStream(model, messages, res);
+    await handleOpenAiStreamWithTools(model, messages, res);
   }
 }
 
@@ -386,31 +475,20 @@ export async function runSecondStream(
   processedContent: string,
   res: Response
 ) {
-  const { client } = generateModel(model);
-  const summaryStream = await client.chat.completions.create({
-    messages: [
-      {
-        role: model.agent,
-        content: secondStreamPrompt,
-      },
-      {
-        role: 'user',
-        content: processedContent,
-      },
-    ],
-    model: model.name,
-    stream: true,
-  });
+  const messages = [
+    {
+      role: model.agent,
+      content: secondStreamPrompt,
+    },
+    {
+      role: 'user',
+      content: processedContent,
+    },
+  ] as ChatCompletionMessageParam[];
 
-  for await (const chunk of summaryStream) {
-    const content = chunk.choices[0]?.delta?.content;
-    if (content) {
-      res.write(
-        `data: ${JSON.stringify({
-          type: 'content',
-          content: content,
-        })}\n\n`
-      );
-    }
+  if (model.client === 'anthropic') {
+    await handleAnthropicStream(model, messages, res);
+  } else {
+    await handleOpenAiStream(model, messages, res);
   }
 }
