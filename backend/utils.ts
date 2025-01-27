@@ -295,6 +295,14 @@ async function handleOpenAiStreamWithTools(
 
   for await (const chunk of stream) {
     if (chunk.choices[0]?.delta?.tool_calls) {
+      if (!toolCallInProgress) {
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'content',
+            content: ' ',
+          })}\n\n`
+        );
+      }
       toolCallInProgress = true;
       const toolCall = chunk.choices[0].delta.tool_calls[0];
 
@@ -425,6 +433,13 @@ async function handleAnthropicStreamWithTools(
       chunk.type === 'content_block_start' &&
       chunk.content_block?.type === 'tool_use'
     ) {
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'content',
+          content: ' ',
+        })}\n\n`
+      );
+
       currentToolCall.name = chunk.content_block.name;
       currentToolCall.arguments = '{}';
     } else if (
