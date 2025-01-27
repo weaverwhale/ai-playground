@@ -3,7 +3,7 @@ import { marked } from 'marked';
 import mermaid from 'mermaid';
 
 import { models } from '../shared/constants';
-import { ExtendedChatCompletionMessageParam } from '../shared/types';
+import { ExtendedChatCompletionMessageParam, Model } from '../shared/types';
 
 import { ThemeToggle } from './components/ThemeToggle';
 import { ChatForm } from './components/ChatForm';
@@ -350,9 +350,9 @@ function App() {
         currentFileName={currentFileName}
         currentFileType={currentFileType}
         currentFile={currentFile}
-        model={model}
+        model={model as Model}
         setModel={setModel}
-        models={models}
+        models={models as Model[]}
         inputRef={inputRef}
       />
     </div>
