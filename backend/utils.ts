@@ -295,14 +295,6 @@ async function handleOpenAiStreamWithTools(
 
   for await (const chunk of stream) {
     if (chunk.choices[0]?.delta?.tool_calls) {
-      if (!toolCallInProgress) {
-        res.write(
-          `data: ${JSON.stringify({
-            type: 'content',
-            content: ' ',
-          })}\n\n`
-        );
-      }
       toolCallInProgress = true;
       const toolCall = chunk.choices[0].delta.tool_calls[0];
 
@@ -314,8 +306,12 @@ async function handleOpenAiStreamWithTools(
       }
     }
 
-    // Handle regular content
-    if (chunk.choices[0]?.delta?.content) {
+    // Only send regular content if no tool call is in progress
+    if (
+      !toolCallInProgress &&
+      chunk.choices[0]?.delta?.content &&
+      chunk.choices[0]?.delta?.content.length > 0
+    ) {
       res.write(
         `data: ${JSON.stringify({
           type: 'content',
