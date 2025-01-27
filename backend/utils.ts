@@ -428,6 +428,8 @@ async function handleAnthropicStreamWithTools(
     arguments: '',
   };
 
+  let toolCallProcessed = false;
+
   for await (const chunk of stream) {
     if (
       chunk.type === 'content_block_start' &&
@@ -440,27 +442,18 @@ async function handleAnthropicStreamWithTools(
         })}\n\n`
       );
 
+      console.log(chunk);
+
       currentToolCall.name = chunk.content_block.name;
-      currentToolCall.arguments = '{}';
-    } else if (
-      chunk.type === 'content_block_delta' &&
-      'delta' in chunk &&
-      'input_json_delta' in chunk.delta &&
-      typeof chunk.delta.input_json_delta === 'object' &&
-      chunk.delta.input_json_delta &&
-      'partial_json' in chunk.delta.input_json_delta &&
-      typeof chunk.delta.input_json_delta.partial_json === 'string'
-    ) {
-      currentToolCall.arguments =
-        currentToolCall.arguments.slice(0, -1) +
-        (currentToolCall.arguments === '{}' ? '' : ',') +
-        (chunk.delta.input_json_delta.partial_json as string).slice(1);
+      currentToolCall.arguments = JSON.stringify(chunk.content_block.input);
     } else if (
       chunk.type === 'message_delta' &&
-      chunk.delta?.stop_reason === 'tool_use'
+      chunk.delta?.stop_reason === 'tool_use' &&
+      !toolCallProcessed
     ) {
+      toolCallProcessed = true;
       try {
-        const toolCallContent = `<tool>${currentToolCall.name}</tool>${currentToolCall.arguments}`;
+        const toolCallContent = await handleToolCallContent(currentToolCall);
         const processedContent = await processToolUsage(toolCallContent);
 
         res.write(
