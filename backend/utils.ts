@@ -336,14 +336,6 @@ async function handleOpenAiStreamWithTools(
         const toolCallContent = await handleToolCallContent(currentToolCall);
         const processedContent = await processToolUsage(toolCallContent);
 
-        // Send the tool response back to the client
-        res.write(
-          `data: ${JSON.stringify({
-            type: 'content',
-            content: processedContent,
-          })}\n\n`
-        );
-
         // Only run second stream for non-image/chart/moby tools
         if (
           currentToolCall.name !== 'image_generator' &&
@@ -351,6 +343,14 @@ async function handleOpenAiStreamWithTools(
           currentToolCall.name !== 'moby'
         ) {
           await runSecondStream(model, processedContent, res);
+        } else {
+          // otherwise, send the processed content back to the client
+          res.write(
+            `data: ${JSON.stringify({
+              type: 'content',
+              content: processedContent,
+            })}\n\n`
+          );
         }
       } catch (error) {
         console.error('Error processing tool call:', error);
@@ -429,6 +429,7 @@ async function handleAnthropicStreamWithTools(
   };
 
   let toolCallProcessed = false;
+  let accumulatedJson = '';
 
   for await (const chunk of stream) {
     if (
@@ -442,10 +443,15 @@ async function handleAnthropicStreamWithTools(
         })}\n\n`
       );
 
-      console.log(chunk);
-
       currentToolCall.name = chunk.content_block.name;
-      currentToolCall.arguments = JSON.stringify(chunk.content_block.input);
+      accumulatedJson = ''; // Reset accumulated JSON for new tool call
+    } else if (
+      chunk.type === 'content_block_delta' &&
+      'delta' in chunk &&
+      chunk.delta.type === 'input_json_delta'
+    ) {
+      // Accumulate the JSON string
+      accumulatedJson += chunk.delta.partial_json;
     } else if (
       chunk.type === 'message_delta' &&
       chunk.delta?.stop_reason === 'tool_use' &&
@@ -453,15 +459,11 @@ async function handleAnthropicStreamWithTools(
     ) {
       toolCallProcessed = true;
       try {
+        // Set the accumulated JSON as the tool call arguments
+        currentToolCall.arguments = accumulatedJson;
+
         const toolCallContent = await handleToolCallContent(currentToolCall);
         const processedContent = await processToolUsage(toolCallContent);
-
-        res.write(
-          `data: ${JSON.stringify({
-            type: 'content',
-            content: processedContent,
-          })}\n\n`
-        );
 
         if (
           currentToolCall.name !== 'image_generator' &&
@@ -469,6 +471,14 @@ async function handleAnthropicStreamWithTools(
           currentToolCall.name !== 'moby'
         ) {
           await runSecondStream(model, processedContent, res);
+        } else {
+          // otherwise, send the processed content back to the client
+          res.write(
+            `data: ${JSON.stringify({
+              type: 'content',
+              content: processedContent,
+            })}\n\n`
+          );
         }
       } catch (error) {
         console.error('Error processing tool call:', error);
