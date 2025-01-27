@@ -216,7 +216,7 @@
 
 .theme-toggle {
   font-size: $font-size-x-large;
-  text-shadow: 0 0 10px var(--color-text);
+  text-shadow: 0 0 10px $color-light;
   padding: 0;
   border-radius: 50%;
   line-height: 1;
