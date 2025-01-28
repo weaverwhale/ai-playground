@@ -16,8 +16,8 @@ app.use(
   })
 );
 
-app.use(bodyParser.json({ limit: '100mb' }));
-app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+app.use(bodyParser.json({ limit: '2mb' }));
+app.use(bodyParser.urlencoded({ limit: '2mb', extended: true }));
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '../frontend')));
