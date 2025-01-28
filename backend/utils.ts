@@ -466,6 +466,13 @@ async function handleAnthropicStreamWithTools(
           currentToolCall.name !== 'chart_generator' &&
           currentToolCall.name !== 'moby'
         ) {
+          res.write(
+            `data: ${JSON.stringify({
+              type: 'content',
+              content: ' ',
+            })}\n\n`
+          );
+
           await runSecondStream(model, processedContent, res);
         } else {
           // otherwise, send the processed content back to the client

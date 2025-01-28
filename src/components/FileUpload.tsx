@@ -25,11 +25,7 @@ export function FileUpload({
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      let base64String = reader.result as string;
-      // For non-image files, we need to extract just the base64 data
-      if (!file.type.startsWith('image/')) {
-        base64String = base64String.split(',')[1]; // Remove the data URL prefix
-      }
+      const base64String = reader.result as string;
       onFileUpload(base64String, file.name, file.type);
       // Blur the input after upload to prevent it from capturing Enter key
       inputRef.current?.blur();
