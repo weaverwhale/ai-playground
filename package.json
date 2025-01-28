@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev:frontend": "vite",
-    "dev:backend": "tsx watch backend/server.ts",
+    "dev:backend": "tsx watch --inspect backend/server.ts",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build:frontend": "vite build",
     "build:backend": "tsc -p tsconfig.prod.json",
