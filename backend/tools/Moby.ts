@@ -27,7 +27,7 @@ function createMoby() {
     'moby',
     'Useful for getting e-commerce analytics and insights from Triple Whale Moby',
     async ({ question, shopId, parentMessageId }) => {
-      console.log('Asking Moby:', question);
+      console.log('Asking Moby:', question, shopId);
 
       const TW_TOKEN = process.env.TW_TOKEN;
       const TW_BEARER_TOKEN = process.env.TW_BEARER_TOKEN;
