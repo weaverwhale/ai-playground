@@ -69,4 +69,11 @@ export const models = [
     client: 'cerebras',
     agent: 'system',
   },
+  // {
+  //   name: 'grok-ai',
+  //   label: 'Grok AI',
+  //   tools: true,
+  //   client: 'grok',
+  //   agent: 'system',
+  // },
 ];
