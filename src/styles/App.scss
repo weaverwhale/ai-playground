@@ -37,6 +37,7 @@
   border-radius: $border-radius;
   max-width: 80%;
   overflow: hidden;
+  flex-shrink: 0;
 
   img {
     margin-bottom: $spacing-base;

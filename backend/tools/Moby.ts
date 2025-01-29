@@ -56,6 +56,7 @@ function createMoby() {
               shopId: shopId,
               conversationId: (parentMessageId || uuidV4()).toString(),
               source: 'chat',
+              dialect: 'clickhouse',
               userId: 'test-user',
               question: question,
               query: question,
