@@ -76,4 +76,11 @@ export const models = [
   //   client: 'grok',
   //   agent: 'system',
   // },
+  // {
+  //   name: 'qwen-max-2025-01-25',
+  //   label: 'Qwen Max',
+  //   tools: true,
+  //   client: 'qwen',
+  //   agent: 'system',
+  // },
 ];

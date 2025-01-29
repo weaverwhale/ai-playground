@@ -10,6 +10,7 @@ import { deepseek } from './clients/deepseek';
 import { cerebras } from './clients/cerebras';
 import { anthropic } from './clients/anthropic';
 import { grok } from './clients/grok';
+import { qwen } from './clients/qwen';
 
 import { secondStreamPrompt, systemPrompt } from './constants';
 import { Tool, tools, rawTools, geminiTools } from './tools';
@@ -213,7 +214,7 @@ function generateOpenAIModel(model: Model) {
   const isDeepSeek = model.client === 'deepseek';
   const isCerebras = model.client === 'cerebras';
   const isGrok = model.client === 'grok';
-
+  const isQwen = model.client === 'qwen';
   const client = (
     isGemini
       ? gemini
@@ -223,10 +224,12 @@ function generateOpenAIModel(model: Model) {
           ? cerebras
           : isGrok
             ? grok
-            : openai
+            : isQwen
+              ? qwen
+              : openai
   ) as OpenAI;
 
-  return { client, isGemini, isDeepSeek, isCerebras, isGrok };
+  return { client, isGemini, isDeepSeek, isCerebras, isGrok, isQwen };
 }
 
 export function transformMessagesForGemini(
