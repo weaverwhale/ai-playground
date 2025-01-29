@@ -1,12 +1,15 @@
 import { z } from 'zod';
 import { Response } from 'express';
+import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 import { Model } from '../shared/types';
 import { gemini } from './clients/gemini';
 import { openai } from './clients/openai';
 import { deepseek } from './clients/deepseek';
+import { cerebras } from './clients/cerebras';
 import { anthropic } from './clients/anthropic';
+
 import { secondStreamPrompt, systemPrompt } from './constants';
 import { Tool, tools, rawTools, geminiTools } from './tools';
 import { models } from '../shared/constants';
@@ -204,10 +207,14 @@ export async function handleToolCallContent(currentToolCall: ToolCall) {
   return toolCallContent;
 }
 
-function generateModel(model: Model) {
+function generateOpenAIModel(model: Model) {
   const isGemini = model.client === 'gemini';
   const isDeepSeek = model.client === 'deepseek';
-  const client = isGemini ? gemini : isDeepSeek ? deepseek : openai;
+  const isCerebras = model.client === 'cerebras';
+
+  const client = (
+    isGemini ? gemini : isDeepSeek ? deepseek : isCerebras ? cerebras : openai
+  ) as OpenAI;
 
   return { client, isGemini, isDeepSeek };
 }
@@ -242,7 +249,7 @@ async function handleOpenAiStream(
   messages: ChatCompletionMessageParam[],
   res: Response
 ) {
-  const { client } = generateModel(model);
+  const { client } = generateOpenAIModel(model);
   const summaryStream = await client.chat.completions.create({
     messages,
     model: model.name,
@@ -267,7 +274,7 @@ async function handleOpenAiStreamWithTools(
   messages: ChatCompletionMessageParam[],
   res: Response
 ) {
-  const { client, isGemini } = generateModel(model);
+  const { client, isGemini } = generateOpenAIModel(model);
   const agent = model.agent;
   const formattedTools = isGemini ? geminiTools : tools;
 

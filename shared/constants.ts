@@ -55,4 +55,18 @@ export const models = [
     client: 'anthropic',
     agent: 'assistant',
   },
+  {
+    name: 'llama-3.3-70b',
+    label: 'Llama 3.3 70B',
+    tools: true,
+    client: 'cerebras',
+    agent: 'system',
+  },
+  {
+    name: 'llama-3.1-8b',
+    label: 'Llama 3.1 8B',
+    tools: true,
+    client: 'cerebras',
+    agent: 'system',
+  },
 ];
