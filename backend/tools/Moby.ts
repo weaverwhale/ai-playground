@@ -58,6 +58,7 @@ function createMoby() {
               source: 'chat',
               dialect: 'clickhouse',
               userId: 'test-user',
+              additionalShopIds: [],
               question: question,
               query: question,
               generateInsights: true,
