@@ -67,11 +67,13 @@
   position: relative;
   margin-top: $spacing-large;
 
-  input {
-    width: 100%;
-    border: $border-width solid var(--color-border);
+  .input-container {
     flex-grow: 1;
-    flex-basis: 100%;
+
+    input {
+      width: 100%;
+      border: $border-width solid var(--color-border);
+    }
   }
 
   select {
@@ -79,6 +81,7 @@
     border-radius: $border-radius;
     background-color: var(--color-bg);
     cursor: pointer;
+    flex-shrink: 1;
   }
 
   .button {
