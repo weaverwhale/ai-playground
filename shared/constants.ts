@@ -28,6 +28,13 @@ export const models = [
     agent: 'assistant',
   },
   {
+    name: 'o3-mini',
+    label: 'o3 Mini',
+    tools: true,
+    client: 'openai',
+    agent: 'assistant',
+  },
+  {
     name: 'gemini-2.0-flash-exp',
     label: 'Gemini 2.0 Exp',
     tools: true,
