@@ -3,7 +3,11 @@ import { marked } from 'marked';
 import mermaid from 'mermaid';
 
 import { models } from '../shared/constants';
-import { ExtendedChatCompletionMessageParam, Model } from '../shared/types';
+import {
+  MessageContentArray,
+  ExtendedChatCompletionMessageParam,
+  Model,
+} from '../shared/types';
 
 import { ThemeToggle } from './components/ThemeToggle';
 import { ChatForm } from './components/ChatForm';
@@ -160,21 +164,31 @@ function App() {
           type: 'text',
           text: prompt,
         },
-        ...(currentFileName && currentFile
-          ? [
-              currentFileType?.startsWith('image')
-                ? {
-                    type: 'image_url' as const,
-                    image_url: { url: currentFile },
-                  }
-                : {
-                    type: 'text' as const,
-                    text: `File: ${currentFileName}\nContent: ${currentFile}`,
-                  },
-            ]
-          : []),
       ],
     };
+
+    if (currentFileName && currentFile) {
+      if (currentFileType?.startsWith('image')) {
+        (userMessage.content as MessageContentArray).push({
+          type: 'image_url',
+          image_url: { url: currentFile },
+        });
+      } else {
+        // Decode base64 for text-based files
+        const isTextFile = ['csv', 'json', 'txt'].some((ext) =>
+          currentFileType?.includes(ext)
+        );
+        const base64Content = currentFile.split('base64,')[1];
+        const content = isTextFile
+          ? decodeURIComponent(escape(window.atob(base64Content)))
+          : currentFile;
+
+        (userMessage.content as MessageContentArray).push({
+          type: 'text',
+          text: `<details><summary>File: ${currentFileName}</summary>\n<pre>${content}</pre></details>`,
+        });
+      }
+    }
 
     setMessages((prevMessages) => [...prevMessages, userMessage]);
     setPrompt('');

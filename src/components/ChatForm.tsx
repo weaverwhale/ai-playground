@@ -51,7 +51,7 @@ export function ChatForm({
   return (
     <form className="input-form" onSubmit={handleSubmit}>
       <div className="input-container">
-        {messages.length > 0 && (
+        {messages.length > 0 && !currentFile && (
           <div className="chat-form-toolbar">
             <div className="clear-conversation" onClick={handleClear}>
               <span>Clear conversation</span>

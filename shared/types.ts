@@ -1,10 +1,14 @@
 import { models } from './constants';
 
+export type MessageContentArray = Array<{
+  type: string;
+  text?: string;
+  image_url?: { url: string };
+}>;
+
 export interface ExtendedChatCompletionMessageParam {
   role: 'system' | 'user' | 'assistant' | 'function';
-  content:
-    | string
-    | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+  content: string | MessageContentArray;
   name?: string;
   function_call?: {
     name?: string;
