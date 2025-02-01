@@ -61,7 +61,6 @@ export function ChatForm({
                 messages={messages}
                 setMessages={setMessages}
                 whichIcons={['save', 'load']}
-                showOnHover={true}
                 isLoading={isLoading}
               />
             )}

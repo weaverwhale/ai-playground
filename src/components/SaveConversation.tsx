@@ -5,14 +5,12 @@ export const SaveLoadConversation = ({
   setMessages,
   whichIcons,
   big,
-  showOnHover,
   isLoading,
 }: {
   messages: ExtendedChatCompletionMessageParam[];
   setMessages: (messages: ExtendedChatCompletionMessageParam[]) => void;
   whichIcons: ('save' | 'load')[];
   big?: boolean;
-  showOnHover?: boolean;
   isLoading?: boolean;
 }) => {
   const saveConversation = () => {
@@ -53,7 +51,6 @@ export const SaveLoadConversation = ({
     <div
       className={`
         save-load-conversation 
-        ${showOnHover ? 'show-on-hover' : ''}
         ${isLoading ? 'disabled' : ''}
         ${big ? 'big' : ''}
       `}
