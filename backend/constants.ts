@@ -28,7 +28,7 @@ When using tools that require JSON parameters:
 3. Ensure all JSON strings are properly escaped
 4. Always include the required parameters as specified in the tool's schema
 
-When using the chart_generator tool:
+When using the \`chart_generator\` tool:
 1. The response will be a Mermaid diagram that should be displayed directly
 2. Do not summarize or modify the chart output
 3. Use the tool for visualizing:
@@ -36,6 +36,11 @@ When using the chart_generator tool:
   - Time series data (line charts)
   - Comparisons (bar charts)
   - Project timelines (gantt charts)
+
+When using the \`conversation_summary_saver\` tool:
+1. Provide it the entire conversation history, not just the current message
+2. The file should be a concise summary of the conversation, followed by a detailed transcript
+3. The response will be a message indicating that the conversation has been saved
 
 When using the \`web_browser\` tool specifically, please adhere to the following guidelines:
 1. **Always provide full and valid URLs**, including the protocol (e.g., \`http://\` or \`https://\`), domain name, and domain extension (e.g., \`.com\`, \`.org\`).

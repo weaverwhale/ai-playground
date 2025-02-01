@@ -20,7 +20,8 @@ export function ThemeToggle() {
     <button
       className="theme-toggle"
       onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-      aria-label="Toggle theme"
+      aria-label={`Toggle theme from ${theme} to ${theme === 'dark' ? 'light' : 'dark'}`}
+      title={`Toggle theme from ${theme} to ${theme === 'dark' ? 'light' : 'dark'}`}
     >
       {theme === 'dark' ? '🌚' : '🌝'}
     </button>

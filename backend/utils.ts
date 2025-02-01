@@ -352,11 +352,12 @@ async function handleOpenAiStreamWithTools(
         const toolCallContent = await handleToolCallContent(currentToolCall);
         const processedContent = await processToolUsage(toolCallContent);
 
-        // Only run second stream for non-image/chart/moby tools
+        // Only run second stream for non-image/chart/moby/conversation_saver tools
         if (
           currentToolCall.name !== 'image_generator' &&
           currentToolCall.name !== 'chart_generator' &&
-          currentToolCall.name !== 'moby'
+          currentToolCall.name !== 'moby' &&
+          currentToolCall.name !== 'conversation_saver'
         ) {
           await runSecondStream(model, processedContent, res);
         } else {

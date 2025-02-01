@@ -7,6 +7,8 @@ import { ExtendedChatCompletionMessageParam, Model } from '../shared/types';
 
 import { ThemeToggle } from './components/ThemeToggle';
 import { ChatForm } from './components/ChatForm';
+import { SaveLoadConversation } from './components/SaveConversation';
+
 import './styles/App.scss';
 
 mermaid.initialize({
@@ -312,7 +314,18 @@ function App() {
     <div className="container">
       <div className="header">
         <h1 onClick={handleClear}>Chat 🤖</h1>
-        <ThemeToggle />
+        <div className="header-right">
+          {messages.length <= 1 && (
+            <SaveLoadConversation
+              messages={messages}
+              setMessages={setMessages}
+              whichIcons={['load']}
+              isLoading={isLoading}
+              big={true}
+            />
+          )}
+          <ThemeToggle />
+        </div>
       </div>
       <div className="messages" ref={messagesContainerRef}>
         {messages.map((message, index) => (
@@ -347,9 +360,11 @@ function App() {
         handleFileUpload={handleFileUpload}
         isLoading={isLoading}
         messages={messages}
+        setMessages={setMessages}
         currentFileName={currentFileName}
         currentFileType={currentFileType}
         currentFile={currentFile}
+        showSaveLoad={messages.length > 1}
         model={model as Model}
         setModel={setModel}
         models={models as Model[]}

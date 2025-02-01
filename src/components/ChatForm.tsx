@@ -1,6 +1,7 @@
 import React, { RefObject } from 'react';
 import { ExtendedChatCompletionMessageParam, Model } from '../../shared/types';
 import { FileUpload } from './FileUpload';
+import { SaveLoadConversation } from './SaveConversation';
 
 interface ChatFormProps {
   prompt: string;
@@ -16,6 +17,7 @@ interface ChatFormProps {
   ) => void;
   isLoading: boolean;
   messages: ExtendedChatCompletionMessageParam[];
+  setMessages: (messages: ExtendedChatCompletionMessageParam[]) => void;
   currentFileName: string | null;
   currentFileType: string | null;
   currentFile: string | null;
@@ -23,6 +25,7 @@ interface ChatFormProps {
   setModel: (model: Model) => void;
   models: Model[];
   inputRef: RefObject<HTMLInputElement>;
+  showSaveLoad: boolean;
 }
 
 export function ChatForm({
@@ -35,6 +38,7 @@ export function ChatForm({
   handleFileUpload,
   isLoading,
   messages,
+  setMessages,
   currentFileName,
   currentFileType,
   currentFile,
@@ -42,15 +46,27 @@ export function ChatForm({
   setModel,
   models,
   inputRef,
+  showSaveLoad,
 }: ChatFormProps) {
   return (
     <form className="input-form" onSubmit={handleSubmit}>
-      {messages.length > 0 && (
-        <div className="clear-conversation" onClick={handleClear}>
-          <span>Clear conversation</span>
-        </div>
-      )}
       <div className="input-container">
+        {messages.length > 0 && (
+          <div className="chat-form-toolbar">
+            <div className="clear-conversation" onClick={handleClear}>
+              <span>Clear conversation</span>
+            </div>
+            {showSaveLoad && (
+              <SaveLoadConversation
+                messages={messages}
+                setMessages={setMessages}
+                whichIcons={['save', 'load']}
+                showOnHover={true}
+                isLoading={isLoading}
+              />
+            )}
+          </div>
+        )}
         <input
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}

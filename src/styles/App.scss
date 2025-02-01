@@ -9,6 +9,11 @@
   h1 {
     cursor: pointer;
   }
+
+  .header-right {
+    display: flex;
+    gap: $spacing-base;
+  }
 }
 
 .container {
@@ -68,6 +73,7 @@
   margin-top: $spacing-large;
 
   .input-container {
+    position: relative;
     flex-grow: 1;
 
     input {
@@ -108,14 +114,29 @@
     }
   }
 
-  .clear-conversation {
-    cursor: pointer;
+  .chat-form-toolbar {
     position: absolute;
-    top: -$spacing-base;
-    left: $spacing-base;
+    top: -$spacing-base * 1.5;
+    left: 0;
+    width: 100%;
 
-    span {
-      font-size: $font-size-small;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-small;
+
+    .clear-conversation {
+      cursor: pointer;
+
+      span {
+        font-size: $font-size-small;
+      }
+    }
+
+    .save-load-conversation {
+      button {
+        padding: 0;
+      }
     }
   }
 }
@@ -219,10 +240,38 @@
   }
 }
 
-.theme-toggle {
+.theme-toggle,
+.save-load-conversation.big button {
   font-size: $font-size-x-large;
   text-shadow: 0 0 10px $color-light;
   padding: 0;
   border-radius: 50%;
   line-height: 1;
+}
+
+.save-load-conversation {
+  display: flex;
+  align-items: center;
+  gap: $spacing-small;
+
+  button {
+    cursor: pointer;
+    font-style: normal;
+    border-radius: 8px;
+  }
+
+  &.show-on-hover {
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 }
