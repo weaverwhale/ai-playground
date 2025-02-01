@@ -65,7 +65,7 @@
     margin-bottom: $spacing-base;
     border: $border-width solid var(--color-border);
     border-radius: $border-radius;
-    padding: $spacing-base / 2;
+    padding: calc($spacing-base / 2);
     overflow: scroll;
 
     summary {
