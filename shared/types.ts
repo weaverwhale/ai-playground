@@ -15,3 +15,5 @@ export interface ExtendedChatCompletionMessageParam {
 export type Model = (typeof models)[number] & {
   agent: 'system' | 'assistant';
 };
+
+export type ToolCall = { name: string; arguments: string };
