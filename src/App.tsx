@@ -342,7 +342,7 @@ function App() {
         </div>
       </div>
       <div className="messages" ref={messagesContainerRef}>
-        {messages.map((message, index) => (
+        {messages?.map((message, index) => (
           <div key={index} className={`message ${message.role}`}>
             {message.role === 'assistant' &&
             message.content === '' &&
