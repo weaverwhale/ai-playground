@@ -39,7 +39,36 @@ export const SaveLoadConversation = ({
       reader.onload = (event) => {
         const result = event.target?.result;
         if (typeof result === 'string') {
-          setMessages(JSON.parse(result));
+          try {
+            const parsed = JSON.parse(result);
+            if (!Array.isArray(parsed)) {
+              throw new Error(
+                'Invalid format: conversation data is not an array'
+              );
+            }
+
+            const isValid = parsed.every(
+              (item: ExtendedChatCompletionMessageParam) =>
+                item &&
+                typeof item === 'object' &&
+                typeof item.role === 'string' &&
+                typeof item.content === 'string'
+            );
+
+            if (!isValid) {
+              const error =
+                'Invalid conversation format: Some messages do not conform';
+              alert(error);
+              throw new Error(error);
+            }
+
+            setMessages(parsed);
+          } catch (err) {
+            console.error('Error loading conversation:', err);
+            alert(
+              'Failed to load conversation. Please ensure the file is correctly formatted.'
+            );
+          }
         }
       };
       reader.readAsText(target.files[0]);
