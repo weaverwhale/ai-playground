@@ -1,7 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { marked } from 'marked';
-import mermaid from 'mermaid';
-
 import { models } from '../shared/constants';
 import {
   MessageContentArray,
@@ -15,26 +12,41 @@ import { SaveLoadConversation } from './components/SaveConversation';
 
 import './styles/App.scss';
 
-mermaid.initialize({
-  startOnLoad: true,
-  theme: 'default',
-  securityLevel: 'loose',
-});
+// Lazy-load marked library to reduce initial bundle size
+let cachedMarked: typeof import('marked').marked | null = null;
+async function getMarked() {
+  if (cachedMarked) return cachedMarked;
+  const markedModule = await import('marked');
+  cachedMarked = markedModule.marked;
+  return cachedMarked;
+}
+
+// Helper for lazy-loading mermaid with caching
+let cachedMermaid: typeof import('mermaid').default | null = null;
+async function getMermaid() {
+  if (cachedMermaid) return cachedMermaid;
+  const mermaidModule = await import('mermaid');
+  cachedMermaid = mermaidModule.default;
+  cachedMermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    securityLevel: 'loose',
+  });
+  return cachedMermaid;
+}
 
 function renderMessage(message: ExtendedChatCompletionMessageParam): string {
   if (!message.content) return '';
 
   if (typeof message.content === 'string') {
-    // Check for Mermaid code blocks
+    // Check for Mermaid code blocks and replace them with placeholders
     const mermaidRegex = /```mermaid\n([\s\S]*?)```/g;
     let content = message.content;
     const mermaidBlocks: Array<{ id: string; code: string }> = [];
     let index = 0;
 
-    // Replace Mermaid blocks with placeholders
     content = content.replace(mermaidRegex, (_match, code) => {
       const id = `mermaid-${index++}`;
-      // Add proper newlines and indentation for Mermaid syntax
       const formattedCode = code
         .trim()
         .split('\n')
@@ -44,30 +56,43 @@ function renderMessage(message: ExtendedChatCompletionMessageParam): string {
       return `<div id="${id}" class="mermaid">\n${formattedCode}\n</div>`;
     });
 
-    // Process any Mermaid diagrams
+    // When a message contains Mermaid blocks, process them via dynamic import
     if (mermaidBlocks.length > 0) {
       setTimeout(() => {
-        mermaid.run({
-          querySelector: '.mermaid',
-          suppressErrors: false, // Change to false to see errors
-        });
+        (async () => {
+          const mermaidInstance = await getMermaid();
+          mermaidInstance.run({
+            querySelector: '.mermaid',
+            suppressErrors: false, // set to false to log diagram errors if any
+          });
+        })();
       }, 0);
     }
 
-    // Render non-Mermaid content with marked
-    const htmlContent = marked.parse(content, {
-      breaks: true,
-      gfm: true,
-    }) as string;
-
-    return htmlContent;
+    // Use lazy-loaded marked to process markdown formatting.
+    // If marked hasn't been loaded yet, fall back to returning plain text.
+    if (cachedMarked) {
+      const htmlContent = cachedMarked.parse(content, {
+        breaks: true,
+        gfm: true,
+      }) as string;
+      return htmlContent;
+    } else {
+      return content;
+    }
   }
 
+  // If the message content is an array of content objects
   if (Array.isArray(message.content)) {
     return message.content
       .map((content) => {
         if (content.type === 'text') {
-          return marked(content.text || '', { breaks: true, gfm: true });
+          return cachedMarked
+            ? cachedMarked.parse(content.text || '', {
+                breaks: true,
+                gfm: true,
+              })
+            : content.text || '';
         }
         if (content.type === 'image_url') {
           return `<img src="${content.image_url!.url}" alt="Uploaded content" />`;
@@ -95,6 +120,14 @@ function App() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   const [currentFileType, setCurrentFileType] = useState<string | null>(null);
+
+  // Add state to force a re-render once marked is loaded
+  const [, setIsMarkedLoaded] = useState(false);
+
+  // Preload marked once the App mounts. Once loaded, trigger a re-render.
+  useEffect(() => {
+    getMarked().then(() => setIsMarkedLoaded(true));
+  }, []);
 
   const handleScroll = useCallback((e: Event) => {
     const messagesContainer = messagesContainerRef.current;

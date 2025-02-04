@@ -99,7 +99,12 @@
     border-radius: $border-radius;
     background-color: var(--color-bg);
     cursor: pointer;
-    flex-shrink: 1;
+    flex-grow: 1;
+
+    @media (min-width: $mobile) {
+      flex-shrink: 1;
+      flex-grow: 0;
+    }
   }
 
   .button {
@@ -120,7 +125,7 @@
     }
   }
 
-  @media (min-width: 600px) {
+  @media (min-width: $tablet) {
     .button {
       flex-grow: 0;
     }
@@ -128,14 +133,17 @@
 
   .chat-form-toolbar {
     position: absolute;
-    top: -$spacing-base * 1.5;
+    top: -$spacing-base * 2;
     left: 0;
     width: 100%;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: $spacing-small;
+
+    @media (min-width: $tablet) {
+      top: -$spacing-base * 1.7;
+    }
 
     .clear-conversation {
       cursor: pointer;
@@ -148,6 +156,7 @@
     .save-load-conversation {
       button {
         padding: 0;
+        border-radius: 5px;
       }
     }
   }
