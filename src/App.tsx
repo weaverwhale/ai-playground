@@ -164,9 +164,16 @@ function App() {
     inputRef.current?.focus();
   };
 
+  const doScroll = () => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'instant',
+      block: 'end',
+    });
+  };
+
   const scrollToBottom = useCallback(() => {
     if (autoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      doScroll();
     }
   }, [autoScroll]);
 
@@ -205,6 +212,7 @@ function App() {
 
     setLastUserMessage(prompt.trim());
     setIsLoading(true);
+    doScroll();
 
     const userMessage: ExtendedChatCompletionMessageParam = {
       role: 'user',

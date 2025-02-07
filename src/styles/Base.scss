@@ -16,12 +16,12 @@ h1 {
 }
 
 a {
-  font-weight: $font-weight-medium;
-  color: $color-primary;
+  font-weight: $font-weight-bold;
+  color: var(--link-color);
   text-decoration: inherit;
 
   &:hover {
-    color: $color-primary-darker;
+    color: var(--link-color-hover);
   }
 }
 
