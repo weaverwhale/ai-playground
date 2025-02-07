@@ -105,6 +105,22 @@ function renderMessage(message: ExtendedChatCompletionMessageParam): string {
   return '';
 }
 
+function renderToolCall(toolName: string) {
+  if (toolName === 'wikipedia') return '🔍 Searching Wikipedia...';
+  if (toolName === 'web_browser') return '🌐 Searching the web...';
+  if (toolName === 'calculator') return '🔢 Calculating...';
+  if (toolName === 'image_generator') return '🖼️ Generating image...';
+  if (toolName === 'moby') return '🐳 Asking Moby...';
+  if (toolName === 'urban_dictionary')
+    return '📚 Searching Urban Dictionary...';
+  if (toolName === 'forecast') return '🌤️ Forecasting...';
+  if (toolName === 'chart_generator') return '📈 Creating chart...';
+  if (toolName === 'conversation_summary_saver')
+    return '💾 Saving conversation summary';
+  if (toolName === 'github_review') return '🐙 Checking GitHub...';
+  return `🛠️ Using tool: ${toolName}`;
+}
+
 function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState('');
@@ -296,7 +312,6 @@ function App() {
                   const newMessages = [...prevMessages];
                   const lastMessage = newMessages[newMessages.length - 1];
 
-                  // Only show "Using tool" message once
                   if (
                     toolCall.function?.name &&
                     typeof lastMessage.content === 'string'
@@ -307,7 +322,9 @@ function App() {
                         `Using tool: ${toolCall.function.name}`
                       )
                     ) {
-                      lastMessage.content = `Using tool: ${toolCall.function.name}\n\n`;
+                      lastMessage.content += renderToolCall(
+                        toolCall.function?.name
+                      );
                     }
                   }
                   return newMessages;

@@ -10,6 +10,8 @@ import { tools, geminiTools } from '../tools';
 import { handleToolCallContent, processToolUsage } from './tools';
 import { models } from '../../shared/constants';
 
+const sendToolCallsToClient = true;
+
 export function transformMessagesForGemini(
   messages: ChatCompletionMessageParam[]
 ) {
@@ -98,6 +100,18 @@ async function handleOpenAiStreamWithTools(
 
       if (toolCall.function?.name) {
         currentToolCall.name = toolCall.function.name;
+
+        // Send tool call notification to client
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'tool_call',
+            tool_call: {
+              function: {
+                name: toolCall.function.name,
+              },
+            },
+          })}\n\n`
+        );
       }
       if (toolCall.function?.arguments) {
         currentToolCall.arguments += toolCall.function.arguments;
@@ -229,16 +243,22 @@ async function handleAnthropicStreamWithTools(
   for await (const chunk of stream) {
     if (
       chunk.type === 'content_block_start' &&
-      chunk.content_block?.type === 'tool_use'
+      chunk.content_block?.type === 'tool_use' &&
+      sendToolCallsToClient
     ) {
+      currentToolCall.name = chunk.content_block.name;
+
+      // Send tool call notification to client
       res.write(
         `data: ${JSON.stringify({
-          type: 'content',
-          content: ' ',
+          type: 'tool_call',
+          tool_call: {
+            function: {
+              name: chunk.content_block.name,
+            },
+          },
         })}\n\n`
       );
-
-      currentToolCall.name = chunk.content_block.name;
       accumulatedJson = ''; // Reset accumulated JSON for new tool call
     } else if (
       chunk.type === 'content_block_delta' &&

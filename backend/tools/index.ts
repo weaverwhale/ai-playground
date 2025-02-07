@@ -8,7 +8,7 @@ import { createCalculator } from './Calculator';
 import { createImageGenerator } from './ImageGenerator';
 import { createGitHubReview } from './GitHubReview';
 import { createUrbanDictionary } from './UrbanDictionary';
-import { createForecast } from './Forecast';
+import { createForecast } from './Forecasting';
 import { createChartGenerator } from './ChartGenerator';
 import { createConversationSummarySaver } from './ConversationSummarySaver';
 import { createMoby } from './Moby';
