@@ -25,7 +25,7 @@ function createMoby() {
   return new Tool(
     paramsSchema,
     'moby',
-    'Useful for getting e-commerce analytics and insights from Triple Whale Moby',
+    "Useful for getting e-commerce analytics and insights from Triple Whale's AI, Moby.",
     async ({ question, shopId, parentMessageId }) => {
       console.log('Asking Moby:', question, shopId);
 
