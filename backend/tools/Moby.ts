@@ -62,6 +62,7 @@ function createMoby() {
               question: question,
               query: question,
               generateInsights: true,
+              isOutsideMainChat: true,
             }),
           }
         );
