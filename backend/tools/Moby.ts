@@ -32,23 +32,26 @@ function createMoby() {
       const TW_TOKEN = process.env.TW_TOKEN;
       const TW_BEARER_TOKEN = process.env.TW_BEARER_TOKEN;
       const IS_ON_VPN = process.env.IS_ON_VPN;
+      const IS_LOCAL = process.env.IS_LOCAL;
       if (!TW_BEARER_TOKEN && !TW_TOKEN && !IS_ON_VPN) {
         return 'Error: Triple Whale token or VPN not configured. ';
       }
 
       try {
         const response = await fetch(
-          IS_ON_VPN
-            ? 'http://willy.srv.whale3.io/answer-nlq-question'
-            : 'https://app.triplewhale.com/api/v2/willy/answer-nlq-question',
+          IS_LOCAL
+            ? 'http://localhost/willy/answer-nlq-question'
+            : IS_ON_VPN
+              ? 'http://willy.srv.whale3.io/answer-nlq-question'
+              : 'https://app.triplewhale.com/api/v2/willy/answer-nlq-question',
           {
             method: 'POST',
             headers: {
               'content-type': 'application/json',
-              ...(IS_ON_VPN
-                ? {}
-                : TW_BEARER_TOKEN
-                  ? { Authorization: `Bearer ${TW_BEARER_TOKEN}` }
+              ...(TW_BEARER_TOKEN || IS_LOCAL
+                ? { Authorization: `Bearer ${TW_BEARER_TOKEN}` }
+                : IS_ON_VPN
+                  ? {}
                   : { 'x-api-key': TW_TOKEN || '' }),
             },
             body: JSON.stringify({
