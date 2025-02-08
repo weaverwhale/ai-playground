@@ -31,8 +31,8 @@ function createMoby() {
 
       const TW_TOKEN = process.env.TW_TOKEN;
       const TW_BEARER_TOKEN = process.env.TW_BEARER_TOKEN;
-      const IS_ON_VPN = process.env.IS_ON_VPN;
-      const IS_LOCAL = process.env.IS_LOCAL;
+      const IS_ON_VPN = process.env.IS_ON_VPN === 'true';
+      const IS_LOCAL = process.env.IS_LOCAL === 'true';
       if (!TW_BEARER_TOKEN && !TW_TOKEN && !IS_ON_VPN) {
         return 'Error: Triple Whale token or VPN not configured. ';
       }

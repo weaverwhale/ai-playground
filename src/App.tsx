@@ -252,7 +252,10 @@ function App() {
 
     setLastUserMessage(prompt.trim());
     setIsLoading(true);
-    doScroll();
+
+    setTimeout(() => {
+      doScroll();
+    }, 50);
 
     const userMessage: ExtendedChatCompletionMessageParam = {
       role: 'user',
