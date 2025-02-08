@@ -271,6 +271,16 @@
   }
 }
 
+.katex-display {
+  display: block;
+  margin: 1em 0;
+  text-align: center;
+}
+
+.katex-inline {
+  padding: 0 0.2em;
+}
+
 .theme-toggle,
 .save-load-conversation.big button {
   font-size: $font-size-x-large;

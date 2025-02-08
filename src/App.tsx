@@ -21,7 +21,7 @@ async function getMarked() {
   return cachedMarked;
 }
 
-// Helper for lazy-loading mermaid with caching
+// lazy-load mermaid with caching
 let cachedMermaid: typeof import('mermaid').default | null = null;
 async function getMermaid() {
   if (cachedMermaid) return cachedMermaid;
@@ -33,6 +33,15 @@ async function getMermaid() {
     securityLevel: 'loose',
   });
   return cachedMermaid;
+}
+
+// lazy-load katex with caching
+let cachedKatex: typeof import('katex').default | null = null;
+async function getKatex() {
+  if (cachedKatex) return cachedKatex;
+  const katexModule = await import('katex');
+  cachedKatex = katexModule.default;
+  return cachedKatex;
 }
 
 function renderMessage(message: ExtendedChatCompletionMessageParam): string {
@@ -56,6 +65,36 @@ function renderMessage(message: ExtendedChatCompletionMessageParam): string {
       return `<div id="${id}" class="mermaid">\n${formattedCode}\n</div>`;
     });
 
+    if (cachedKatex) {
+      // Process LaTeX equations
+      content = content.replace(/\$(.*?)\$/g, (match, latex) => {
+        try {
+          const html = cachedKatex?.renderToString(latex, {
+            throwOnError: false,
+            displayMode: false,
+          });
+          return `<span class="katex-inline">${html}</span>`;
+        } catch (error) {
+          console.error('LaTeX rendering error:', error);
+          return match;
+        }
+      });
+
+      // Process display-mode LaTeX equations
+      content = content.replace(/\$\$(.*?)\$\$/g, (match, latex) => {
+        try {
+          const html = cachedKatex?.renderToString(latex, {
+            throwOnError: false,
+            displayMode: true,
+          });
+          return `<div class="katex-display">${html}</div>`;
+        } catch (error) {
+          console.error('LaTeX rendering error:', error);
+          return match;
+        }
+      });
+    }
+
     // When a message contains Mermaid blocks, process them via dynamic import
     if (mermaidBlocks.length > 0) {
       setTimeout(() => {
@@ -63,14 +102,13 @@ function renderMessage(message: ExtendedChatCompletionMessageParam): string {
           const mermaidInstance = await getMermaid();
           mermaidInstance.run({
             querySelector: '.mermaid',
-            suppressErrors: false, // set to false to log diagram errors if any
+            suppressErrors: false,
           });
         })();
       }, 0);
     }
 
-    // Use lazy-loaded marked to process markdown formatting.
-    // If marked hasn't been loaded yet, fall back to returning plain text.
+    // Use lazy-loaded marked to process markdown formatting
     if (cachedMarked) {
       const htmlContent = cachedMarked.parse(content, {
         breaks: true,
@@ -139,10 +177,12 @@ function App() {
 
   // Add state to force a re-render once marked is loaded
   const [, setIsMarkedLoaded] = useState(false);
+  const [, setIsKatexLoaded] = useState(false);
 
   // Preload marked once the App mounts. Once loaded, trigger a re-render.
   useEffect(() => {
     getMarked().then(() => setIsMarkedLoaded(true));
+    getKatex().then(() => setIsKatexLoaded(true));
   }, []);
 
   const handleScroll = useCallback((e: Event) => {
