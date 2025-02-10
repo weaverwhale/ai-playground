@@ -5,6 +5,22 @@ import { v4 as uuidV4 } from 'uuid';
 
 dotenv.config();
 
+const TW_TOKEN = process.env.TW_TOKEN;
+const TW_BEARER_TOKEN = process.env.TW_BEARER_TOKEN;
+const IS_ON_VPN = process.env.IS_ON_VPN === 'true';
+const IS_LOCAL = process.env.IS_LOCAL === 'true';
+const IS_ORCABASE = process.env.IS_ORCABASE === 'true';
+
+const MOBY_TLD = IS_LOCAL
+  ? 'http://localhost'
+  : IS_ON_VPN
+    ? 'http://willy.srv.whale3.io'
+    : 'https://app.triplewhale.com/api/v2';
+
+const MOBY_ENDPOINT = IS_ORCABASE
+  ? `${MOBY_TLD}/orcabase/moby`
+  : `${MOBY_TLD}/willy/answer-nlq-question`;
+
 function createMoby() {
   const paramsSchema = z.object({
     question: z
@@ -29,46 +45,35 @@ function createMoby() {
     async ({ question, shopId, parentMessageId }) => {
       console.log('Asking Moby:', question, shopId);
 
-      const TW_TOKEN = process.env.TW_TOKEN;
-      const TW_BEARER_TOKEN = process.env.TW_BEARER_TOKEN;
-      const IS_ON_VPN = process.env.IS_ON_VPN === 'true';
-      const IS_LOCAL = process.env.IS_LOCAL === 'true';
       if (!TW_BEARER_TOKEN && !TW_TOKEN && !IS_ON_VPN) {
         return 'Error: Triple Whale token or VPN not configured. ';
       }
 
       try {
-        const response = await fetch(
-          IS_LOCAL
-            ? 'http://localhost/willy/answer-nlq-question'
-            : IS_ON_VPN
-              ? 'http://willy.srv.whale3.io/answer-nlq-question'
-              : 'https://app.triplewhale.com/api/v2/willy/answer-nlq-question',
-          {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              ...(TW_BEARER_TOKEN || IS_LOCAL
-                ? { Authorization: `Bearer ${TW_BEARER_TOKEN}` }
-                : IS_ON_VPN
-                  ? {}
-                  : { 'x-api-key': TW_TOKEN || '' }),
-            },
-            body: JSON.stringify({
-              stream: false,
-              shopId: shopId,
-              conversationId: (parentMessageId || uuidV4()).toString(),
-              source: 'chat',
-              dialect: 'clickhouse',
-              userId: 'test-user',
-              additionalShopIds: [],
-              question: question,
-              query: question,
-              generateInsights: true,
-              isOutsideMainChat: true,
-            }),
-          }
-        );
+        const response = await fetch(MOBY_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            ...(TW_BEARER_TOKEN || IS_LOCAL
+              ? { Authorization: `Bearer ${TW_BEARER_TOKEN}` }
+              : IS_ON_VPN
+                ? {}
+                : { 'x-api-key': TW_TOKEN || '' }),
+          },
+          body: JSON.stringify({
+            stream: false,
+            shopId: shopId,
+            conversationId: (parentMessageId || uuidV4()).toString(),
+            source: 'chat',
+            dialect: 'clickhouse',
+            userId: 'test-user',
+            additionalShopIds: [],
+            question: question,
+            query: question,
+            generateInsights: true,
+            isOutsideMainChat: true,
+          }),
+        });
 
         if (!response.ok) {
           throw new Error(`API request failed with status ${response.status}`);
