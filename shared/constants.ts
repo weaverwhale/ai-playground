@@ -35,6 +35,13 @@ export const models = [
     agent: 'assistant',
   },
   {
+    name: 'gemini-1.5-flash',
+    label: 'Gemini 1.5 Flash',
+    tools: true,
+    client: 'gemini',
+    agent: 'system',
+  },
+  {
     name: 'gemini-2.0-flash-exp',
     label: 'Gemini 2.0 Exp',
     tools: true,
