@@ -166,7 +166,11 @@ function App() {
     ExtendedChatCompletionMessageParam[]
   >([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [model, setModel] = useState(models[0]);
+  const [model, setModel] = useState(
+    (localStorage.getItem('model')
+      ? (models.find((m) => m.name === localStorage.getItem('model')) as Model)
+      : models[0]) as Model
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -244,6 +248,11 @@ function App() {
     setCurrentFile(null);
     setCurrentFileName(null);
     setCurrentFileType(null);
+  };
+
+  const changeModel = (model: Model) => {
+    setModel(model);
+    localStorage.setItem('model', model.name);
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -481,7 +490,7 @@ function App() {
         currentFile={currentFile}
         showSaveLoad={messages.length > 1}
         model={model as Model}
-        setModel={setModel}
+        setModel={changeModel}
         models={models as Model[]}
         inputRef={inputRef}
       />
