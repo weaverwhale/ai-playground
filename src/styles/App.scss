@@ -207,17 +207,24 @@
   position: absolute;
   bottom: 100%;
   left: 0;
-  margin-bottom: $spacing-small;
-  padding: $spacing-small;
-  border-radius: $border-radius;
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 8px;
   display: flex;
   align-items: flex-start;
   background-color: var(--color-button-bg);
-  gap: $spacing-small;
+  gap: 8px;
 
-  img {
+  img,
+  video {
     max-height: 100px;
-    border-radius: $border-radius;
+    border-radius: 8px;
+  }
+
+  .file-preview {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .button {

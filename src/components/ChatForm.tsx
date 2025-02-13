@@ -76,7 +76,11 @@ export function ChatForm({
         <label htmlFor="file-upload" className="upload-button">
           📎
         </label>
-        <FileUpload onFileUpload={handleFileUpload} disabled={isLoading} />
+        <FileUpload
+          onFileUpload={handleFileUpload}
+          disabled={isLoading}
+          model={model}
+        />
         {currentFileName && (
           <div className="image-preview">
             {currentFileType?.startsWith('image') ? (

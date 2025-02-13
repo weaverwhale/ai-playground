@@ -42,6 +42,13 @@ export const models = [
     agent: 'system',
   },
   {
+    name: 'gemini-1.5-pro',
+    label: 'Gemini 1.5 Pro',
+    tools: true,
+    client: 'gemini',
+    agent: 'system',
+  },
+  {
     name: 'gemini-2.0-flash-exp',
     label: 'Gemini 2.0 Exp',
     tools: true,
