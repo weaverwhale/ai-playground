@@ -5,7 +5,8 @@ interface FileUploadProps {
   onFileUpload: (
     base64File: string,
     fileName: string,
-    fileType: string
+    fileType: string,
+    fileSize?: number
   ) => void;
   disabled?: boolean;
   accept?: string;
@@ -22,7 +23,7 @@ export function FileUpload({
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -38,19 +39,41 @@ export function FileUpload({
       return;
     }
 
-    // Check file size (10MB limit for videos)
-    if (file.type.startsWith('video/') && file.size > 10 * 1024 * 1024) {
-      alert('Video files must be under 10MB');
-      if (inputRef.current) {
-        inputRef.current.value = '';
+    // For Gemini video files larger than 20MB, use File API
+    if (file.type.startsWith('video/')) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Upload to your backend endpoint that will handle the File API upload
+        const response = await fetch(
+          `http://localhost:${import.meta.env.VITE_SERVER_PORT}/api/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to upload file');
+        }
+
+        const { fileRef } = await response.json();
+
+        // Pass the File API reference instead of base64
+        onFileUpload(fileRef, file.name, file.type, file.size);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        alert('Failed to upload video file');
       }
       return;
     }
 
+    // For smaller files, continue with base64 encoding
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      onFileUpload(base64String, file.name, file.type);
+      onFileUpload(base64String, file.name, file.type, file.size);
       inputRef.current?.blur();
       if (inputRef.current) {
         inputRef.current.value = '';
