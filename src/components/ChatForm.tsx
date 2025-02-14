@@ -1,4 +1,4 @@
-import React, { RefObject } from 'react';
+import React, { RefObject, useState } from 'react';
 import { ExtendedChatCompletionMessageParam, Model } from '../../shared/types';
 import { FileUpload } from './FileUpload';
 import { SaveLoadConversation } from './SaveConversation';
@@ -48,6 +48,8 @@ export function ChatForm({
   inputRef,
   showSaveLoad,
 }: ChatFormProps) {
+  const [fileLoading, setFileLoading] = useState(false);
+
   return (
     <form className="input-form" onSubmit={handleSubmit}>
       <div className="input-container">
@@ -74,12 +76,13 @@ export function ChatForm({
           ref={inputRef}
         />
         <label htmlFor="file-upload" className="upload-button">
-          📎
+          {fileLoading ? '⌛️' : '📎'}
         </label>
         <FileUpload
           onFileUpload={handleFileUpload}
           disabled={isLoading}
           model={model}
+          setFileLoading={setFileLoading}
         />
         {currentFileName && (
           <div className="image-preview">

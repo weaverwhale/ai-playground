@@ -4,6 +4,10 @@ export type MessageContentArray = Array<{
   type: string;
   text?: string;
   image_url?: { url: string };
+  fileData?: {
+    fileUri: string;
+    mimeType: string;
+  };
 }>;
 
 export interface ExtendedChatCompletionMessageParam {

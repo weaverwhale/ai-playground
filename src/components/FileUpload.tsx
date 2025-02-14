@@ -12,6 +12,7 @@ interface FileUploadProps {
   accept?: string;
   id?: string;
   model?: Model;
+  setFileLoading?: (file: boolean) => void;
 }
 
 export function FileUpload({
@@ -20,6 +21,7 @@ export function FileUpload({
   accept,
   id = 'file-upload',
   model,
+  setFileLoading,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +40,8 @@ export function FileUpload({
       }
       return;
     }
+
+    setFileLoading?.(true);
 
     // For Gemini video files larger than 20MB, use File API
     if (file.type.startsWith('video/')) {
@@ -65,7 +69,10 @@ export function FileUpload({
       } catch (error) {
         console.error('Error uploading file:', error);
         alert('Failed to upload video file');
+      } finally {
+        setFileLoading?.(false);
       }
+
       return;
     }
 
@@ -77,8 +84,10 @@ export function FileUpload({
       inputRef.current?.blur();
       if (inputRef.current) {
         inputRef.current.value = '';
+        setFileLoading?.(false);
       }
     };
+
     reader.readAsDataURL(file);
   };
 

@@ -282,6 +282,15 @@ function App() {
           type: 'image_url',
           image_url: { url: currentFile },
         });
+      } else if (currentFileType?.startsWith('video')) {
+        // Handle video files for Gemini
+        (userMessage.content as MessageContentArray).push({
+          type: 'video_url',
+          fileData: {
+            fileUri: currentFile,
+            mimeType: currentFileType,
+          },
+        });
       } else {
         // Decode base64 for text-based files
         const isTextFile = ['csv', 'json', 'txt'].some((ext) =>
