@@ -29,18 +29,6 @@ export function FileUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check if it's a video file and the model is not Gemini
-    if (
-      file.type.startsWith('video/') &&
-      (!model || model.client !== 'gemini')
-    ) {
-      alert('Video uploads are only supported with Gemini models');
-      if (inputRef.current) {
-        inputRef.current.value = '';
-      }
-      return;
-    }
-
     setFileLoading?.(true);
 
     // For Gemini video files larger than 20MB, use File API
@@ -92,8 +80,9 @@ export function FileUpload({
   };
 
   // Determine accept string based on model
-  const acceptString =
-    accept || (model?.client === 'gemini' ? 'image/*,video/*' : 'image/*');
+  const acceptString = 'image/*';
+  // const acceptString =
+  //   accept || (model?.client === 'gemini' ? 'image/*,video/*' : 'image/*');
 
   return (
     <input
