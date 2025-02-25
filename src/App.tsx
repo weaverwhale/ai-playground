@@ -398,7 +398,7 @@ function App() {
                         !lastMessage.content.endsWith(' ') &&
                         !lastMessage.content.endsWith('\n')
                       ) {
-                        lastMessage.content += ' ';
+                        lastMessage.content += '\n\n';
                       }
                       lastMessage.content += toolCallMessage + '\n\n';
                     }

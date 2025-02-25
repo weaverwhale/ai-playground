@@ -287,7 +287,7 @@ async function handleAnthropicStreamWithTools(
           res.write(
             `data: ${JSON.stringify({
               type: 'content',
-              content: ' ',
+              content: '\n\n',
             })}\n\n`
           );
 
@@ -297,7 +297,7 @@ async function handleAnthropicStreamWithTools(
           res.write(
             `data: ${JSON.stringify({
               type: 'content',
-              content: processedContent,
+              content: processedContent + '\n\n',
             })}\n\n`
           );
         }
