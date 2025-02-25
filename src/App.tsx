@@ -386,14 +386,21 @@ function App() {
                     typeof lastMessage.content === 'string'
                   ) {
                     lastMessage.content = lastMessage.content || '';
-                    if (
-                      !lastMessage.content.includes(
-                        `Using tool: ${toolCall.function.name}`
-                      )
-                    ) {
-                      lastMessage.content += renderToolCall(
-                        toolCall.function?.name
-                      );
+                    // Create the tool call message
+                    const toolCallMessage = renderToolCall(
+                      toolCall.function?.name
+                    );
+                    // Check if this specific tool call message already exists in the content
+                    if (!lastMessage.content.includes(toolCallMessage)) {
+                      // Add a space after the existing content if it's not empty
+                      if (
+                        lastMessage.content &&
+                        !lastMessage.content.endsWith(' ') &&
+                        !lastMessage.content.endsWith('\n')
+                      ) {
+                        lastMessage.content += ' ';
+                      }
+                      lastMessage.content += toolCallMessage + '\n\n';
                     }
                   }
                   return newMessages;

@@ -77,6 +77,13 @@ export const models = [
     agent: 'assistant',
   },
   {
+    name: 'claude-3-7-sonnet-latest',
+    label: 'Claude 3.7 Sonnet',
+    tools: true,
+    client: 'anthropic',
+    agent: 'assistant',
+  },
+  {
     name: 'llama-3.3-70b',
     label: 'Llama 3.3 70B',
     tools: true,
