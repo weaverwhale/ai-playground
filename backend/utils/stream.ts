@@ -282,8 +282,7 @@ async function handleAnthropicStreamWithTools(
 
         if (
           currentToolCall.name !== 'image_generator' &&
-          currentToolCall.name !== 'chart_generator' &&
-          currentToolCall.name !== 'moby'
+          currentToolCall.name !== 'chart_generator'
         ) {
           res.write(
             `data: ${JSON.stringify({
