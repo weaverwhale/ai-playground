@@ -35,6 +35,13 @@ export const models = [
     agent: 'assistant',
   },
   {
+    name: 'gpt-4.5-preview',
+    label: 'GPT-4.5 Preview',
+    tools: true,
+    client: 'openai',
+    agent: 'assistant',
+  },
+  {
     name: 'gemini-1.5-flash',
     label: 'Gemini 1.5 Flash',
     tools: true,
