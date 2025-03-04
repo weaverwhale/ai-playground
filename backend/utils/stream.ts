@@ -177,7 +177,8 @@ async function handleOpenAiStreamWithTools(
 async function handleAnthropicStream(
   model: Model,
   messages: ChatCompletionMessageParam[],
-  res: Response
+  res: Response,
+  isSecondStream: boolean
 ) {
   const stream = await anthropic.messages.create({
     model: model.name,
@@ -190,6 +191,15 @@ async function handleAnthropicStream(
     max_tokens: 4096,
     stream: true,
   });
+
+  if (isSecondStream) {
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'content',
+        content: '\n\n',
+      })}\n\n`
+    );
+  }
 
   for await (const chunk of stream) {
     if (chunk.type === 'content_block_delta') {
@@ -248,7 +258,7 @@ async function handleAnthropicStreamWithTools(
     ) {
       currentToolCall.name = chunk.content_block.name;
 
-      // Send tool call notification to client
+      // Send tool call notification to client immediately
       res.write(
         `data: ${JSON.stringify({
           type: 'tool_call',
@@ -284,16 +294,9 @@ async function handleAnthropicStreamWithTools(
           currentToolCall.name !== 'image_generator' &&
           currentToolCall.name !== 'chart_generator'
         ) {
-          res.write(
-            `data: ${JSON.stringify({
-              type: 'content',
-              content: '\n\n',
-            })}\n\n`
-          );
-
           await runSecondStream(model, processedContent, res);
         } else {
-          // otherwise, send the processed content back to the client
+          // For image/chart generators, send the processed content back to the client
           res.write(
             `data: ${JSON.stringify({
               type: 'content',
@@ -359,7 +362,7 @@ export async function runSecondStream(
   ] as ChatCompletionMessageParam[];
 
   if (model.client === 'anthropic') {
-    await handleAnthropicStream(model, messages, res);
+    await handleAnthropicStream(model, messages, res, true);
   } else {
     await handleOpenAiStream(model, messages, res);
   }
