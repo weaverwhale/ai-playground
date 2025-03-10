@@ -12,6 +12,7 @@ import { createForecast } from './Forecasting';
 import { createChartGenerator } from './ChartGenerator';
 import { createConversationSummarySaver } from './ConversationSummarySaver';
 import { createMoby } from './Moby';
+import { createWeeklyReport } from './WeeklyReport';
 // import { createTextReader } from './TextReader';
 // import { createWeather } from './Weather';
 // import { createTranslator } from './Translator';
@@ -28,6 +29,7 @@ const rawTools = [
   createChartGenerator(),
   createMoby(),
   createConversationSummarySaver(),
+  createWeeklyReport(),
   // createTextReader(),
   // createWeather(),
   // createTranslator(),
@@ -53,6 +55,7 @@ const geminiRawTools = [
   createForecast(),
   createMoby(),
   createConversationSummarySaver(),
+  createWeeklyReport(),
   // @TODO CHART GENERATOR CAUSES ERRORS??
   // createChartGenerator(),
   // createTextReader(),

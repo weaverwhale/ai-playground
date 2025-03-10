@@ -156,6 +156,7 @@ function renderToolCall(toolName: string) {
   if (toolName === 'conversation_summary_saver')
     return '💾 Saving conversation summary';
   if (toolName === 'github_review') return '🐙 Checking GitHub...';
+  if (toolName === 'weekly_report') return '📝 Generating weekly report...';
   return `🛠️ Using tool: ${toolName}`;
 }
 

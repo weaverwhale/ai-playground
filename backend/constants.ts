@@ -78,3 +78,10 @@ After receiving the tool's output, and unless otherwise specified:
   - Remove redundant or irrelevant information
   - Provide context when necessary
 `;
+
+export const weeklyReportPrompt = `
+You are an engineer at Triple Whale. 
+Here is a list of the PRs and commits you made this week. 
+Summarize this into a few sentences about what you've been working on this week, based only on the content of these commit messages. 
+Be very brief and direct and speak in the first person.
+`;
