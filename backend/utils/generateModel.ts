@@ -1,7 +1,4 @@
 import OpenAI from 'openai';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Cerebras } from '@cerebras/cerebras_cloud_sdk';
-import { Groq } from 'groq-sdk';
 
 import { Model } from '../../shared/types';
 import { gemini } from '../clients/gemini';
@@ -12,18 +9,17 @@ import { qwen } from '../clients/qwen';
 import { openai } from '../clients/openai';
 import { groq } from '../clients/groq';
 
-const clientMap: Record<string, OpenAI | GoogleGenerativeAI | Groq | Cerebras> =
-  {
-    gemini,
-    deepseek,
-    cerebras,
-    grok,
-    qwen,
-    groq,
-    openai,
-  };
+const clientMap = {
+  gemini,
+  deepseek,
+  cerebras,
+  grok,
+  qwen,
+  groq,
+  openai,
+};
 
-export function generateOpenAIModel(model: Model) {
+export function generateModel(model: Model) {
   const client = clientMap[model.client] || openai;
   const isClientType = {
     isGemini: model.client === 'gemini',
@@ -34,5 +30,6 @@ export function generateOpenAIModel(model: Model) {
     isGroq: model.client === 'groq',
   };
 
-  return { client, ...isClientType };
+  // coerce type to OpenAI as all of these return OpenAI-esque objects
+  return { client: client as OpenAI, ...isClientType };
 }

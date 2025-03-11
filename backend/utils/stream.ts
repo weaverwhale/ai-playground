@@ -3,7 +3,7 @@ import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 import { Model } from '../../shared/types';
 import { anthropic } from '../clients/anthropic';
-import { generateOpenAIModel } from './generateModel';
+import { generateModel } from './generateModel';
 
 import { secondStreamPrompt, systemPrompt } from '../constants';
 import { tools, geminiTools } from '../tools';
@@ -42,7 +42,7 @@ async function handleOpenAiStream(
   messages: ChatCompletionMessageParam[],
   res: Response
 ) {
-  const { client } = generateOpenAIModel(model);
+  const { client } = generateModel(model);
   const summaryStream = await client.chat.completions.create({
     messages,
     model: model.name,
@@ -67,7 +67,7 @@ async function handleOpenAiStreamWithTools(
   messages: ChatCompletionMessageParam[],
   res: Response
 ) {
-  const { client, isGemini } = generateOpenAIModel(model);
+  const { client, isGemini } = generateModel(model);
   const agent = model.agent;
   const formattedTools = isGemini ? geminiTools : tools;
 
