@@ -142,7 +142,7 @@ async function makeGitHubRequest(
 async function processBatchedRequests<T, R>(
   items: T[],
   processFn: (item: T) => Promise<R>,
-  batchSize = 5,
+  batchSize = 10,
   delayBetweenBatches = 1000
 ): Promise<R[]> {
   const results: R[] = [];
@@ -306,7 +306,7 @@ async function fetchUserPRs(
   };
 
   // Process repositories in batches to avoid rate limits
-  const allPRs = await processBatchedRequests(repos, fetchReposPRs, 3, 2000);
+  const allPRs = await processBatchedRequests(repos, fetchReposPRs, 10, 2000);
 
   // Flatten the array of arrays
   return allPRs.flat();
@@ -391,7 +391,7 @@ async function fetchUserCommits(
   const allCommits = await processBatchedRequests(
     repos,
     fetchReposCommits,
-    3,
+    10,
     2000
   );
 
@@ -406,7 +406,7 @@ async function fetchUserRepositories(
   lookbackMonths: number = 6
 ): Promise<string[]> {
   console.log(
-    `Fetching repositories for user ${username} in organization ${organization}`
+    `Fetching repositories for user ${username} in organization ${organization} and personal repositories`
   );
 
   try {
@@ -418,6 +418,46 @@ async function fetchUserRepositories(
 
     // Try multiple approaches to find repositories the user has contributed to
     const repoSet = new Set<string>();
+
+    // Approach 0: Fetch user's personal repositories
+    console.log(`Fetching personal repositories for ${username}`);
+    try {
+      // GitHub API paginates results, so we need to fetch all pages
+      let page = 1;
+      let hasMorePages = true;
+      const personalRepos: Set<string> = new Set();
+
+      while (hasMorePages) {
+        const userReposUrl = `https://api.github.com/users/${username}/repos?per_page=100&page=${page}`;
+        const userReposData = await makeGitHubRequest(userReposUrl, token);
+
+        if (Array.isArray(userReposData) && userReposData.length > 0) {
+          // Include all personal repositories
+          userReposData.forEach((repo) => {
+            if (repo.owner && repo.owner.login === username) {
+              personalRepos.add(repo.full_name);
+            }
+          });
+
+          // Check if we have more pages
+          hasMorePages = userReposData.length === 100;
+          page++;
+
+          // Add a delay between pages to avoid rate limiting
+          if (hasMorePages) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        } else {
+          hasMorePages = false;
+        }
+      }
+
+      // Add personal repositories to the main set
+      personalRepos.forEach((repo) => repoSet.add(repo));
+      console.log(`Found ${personalRepos.size} personal repositories`);
+    } catch (error) {
+      console.error(`Error fetching personal repositories:`, error);
+    }
 
     // Approach 1: Search for commits by the user across the organization
     console.log(
@@ -456,21 +496,50 @@ async function fetchUserRepositories(
       console.error(`Error in approach 1:`, error);
     }
 
-    // If we didn't find any repos with approach 1, try approach 2
+    // If we didn't find any org repos with approach 1, try approach 2
+    // Note: We still continue even if we found personal repos
     if (repoSet.size === 0) {
       // Approach 2: Get user's repositories directly
       console.log(`Approach 2: Fetching user's repositories directly`);
       try {
-        const userReposUrl = `https://api.github.com/users/${username}/repos?per_page=100`;
-        const userReposData = await makeGitHubRequest(userReposUrl, token);
+        // GitHub API paginates results, so we need to fetch all pages
+        let page = 1;
+        let hasMorePages = true;
+        const userOrgRepos: Set<string> = new Set();
 
-        if (Array.isArray(userReposData) && userReposData.length > 0) {
-          userReposData
-            .filter((repo) => repo.owner && repo.owner.login === organization)
-            .forEach((repo) => repoSet.add(repo.full_name));
+        while (hasMorePages) {
+          const userReposUrl = `https://api.github.com/users/${username}/repos?per_page=100&page=${page}`;
+          const userReposData = await makeGitHubRequest(userReposUrl, token);
 
-          console.log(`Found ${repoSet.size} repositories from user's repos`);
+          if (Array.isArray(userReposData) && userReposData.length > 0) {
+            // Include both organization repositories and personal repositories
+            userReposData.forEach((repo) => {
+              if (
+                (repo.owner && repo.owner.login === organization) ||
+                (repo.owner && repo.owner.login === username)
+              ) {
+                userOrgRepos.add(repo.full_name);
+              }
+            });
+
+            // Check if we have more pages
+            hasMorePages = userReposData.length === 100;
+            page++;
+
+            // Add a delay between pages to avoid rate limiting
+            if (hasMorePages) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          } else {
+            hasMorePages = false;
+          }
         }
+
+        // Add user's repositories to the main set
+        userOrgRepos.forEach((repo) => repoSet.add(repo));
+        console.log(
+          `Found ${userOrgRepos.size} repositories from user's repos`
+        );
       } catch (error) {
         console.error(`Error in approach 2:`, error);
       }
@@ -483,21 +552,45 @@ async function fetchUserRepositories(
         `Approach 3: Checking organization repositories for user contributions`
       );
       try {
-        const orgReposUrl = `https://api.github.com/orgs/${organization}/repos?per_page=100`;
-        const orgReposData = await makeGitHubRequest(orgReposUrl, token);
+        // GitHub API paginates results, so we need to fetch all pages
+        let page = 1;
+        let hasMorePages = true;
+        const orgRepos: { full_name: string; updated_at: string }[] = [];
 
-        if (Array.isArray(orgReposData) && orgReposData.length > 0) {
-          // Get the most active repositories in the organization (up to 10)
-          const activeRepos = orgReposData
+        while (hasMorePages) {
+          const orgReposUrl = `https://api.github.com/orgs/${organization}/repos?per_page=100&page=${page}`;
+          const orgReposData = await makeGitHubRequest(orgReposUrl, token);
+
+          if (Array.isArray(orgReposData) && orgReposData.length > 0) {
+            orgRepos.push(...orgReposData);
+
+            // Check if we have more pages
+            hasMorePages = orgReposData.length === 100;
+            page++;
+
+            // Add a delay between pages to avoid rate limiting
+            if (hasMorePages) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          } else {
+            hasMorePages = false;
+          }
+        }
+
+        if (orgRepos.length > 0) {
+          // Get the most active repositories in the organization
+          const activeRepos = orgRepos
             .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-            .slice(0, 10);
+            .slice(0, 30);
 
           console.log(
             `Checking ${activeRepos.length} most active repositories in the organization`
           );
 
-          // Check each repository for user contributions
-          for (const repo of activeRepos) {
+          // Define a function to check if a user is a contributor to a repository
+          const checkRepoContributor = async (repo: {
+            full_name: string;
+          }): Promise<string | null> => {
             try {
               const contributorsUrl = `https://api.github.com/repos/${repo.full_name}/contributors`;
               const contributorsData = await makeGitHubRequest(
@@ -511,20 +604,32 @@ async function fetchUserRepositories(
                 );
 
                 if (isContributor) {
-                  repoSet.add(repo.full_name);
                   console.log(`Found user as contributor to ${repo.full_name}`);
+                  return repo.full_name;
                 }
               }
+              return null;
             } catch (error) {
               console.error(
                 `Error checking contributors for ${repo.full_name}:`,
                 error
               );
+              return null;
             }
+          };
 
-            // Add a small delay between requests to avoid rate limiting
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
+          // Process repositories in batches to avoid rate limits
+          const contributorRepos = await processBatchedRequests(
+            activeRepos,
+            checkRepoContributor,
+            5, // Smaller batch size for contributor checks
+            1000 // Delay between batches
+          );
+
+          // Add the repositories where the user is a contributor
+          contributorRepos
+            .filter((repoName): repoName is string => repoName !== null)
+            .forEach((repoName) => repoSet.add(repoName));
 
           console.log(
             `Found ${repoSet.size} repositories from organization repos`
@@ -730,7 +835,7 @@ function createWeeklyReport() {
         // Try to fetch repositories the user has committed to
         try {
           console.log(
-            `Attempting to fetch repositories for user: ${username} in organization: ${organization}`
+            `Attempting to fetch repositories for user: ${username} in organization: ${organization} (and personal repositories)`
           );
           const userRepos = await fetchUserRepositories(
             username,
@@ -740,7 +845,7 @@ function createWeeklyReport() {
 
           if (userRepos.length > 0) {
             console.log(
-              `Successfully found ${userRepos.length} repositories for user ${username}`
+              `Successfully found ${userRepos.length} repositories (including personal repos) for user ${username}`
             );
             reposToUse = [
               ...userRepos,
