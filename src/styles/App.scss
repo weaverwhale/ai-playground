@@ -101,7 +101,7 @@
     cursor: pointer;
     flex-grow: 1;
 
-    @media (min-width: $mobile) {
+    @media (min-width: $tablet) {
       flex-shrink: 1;
       flex-grow: 0;
     }

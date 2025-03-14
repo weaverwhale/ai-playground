@@ -23,24 +23,210 @@ interface GitHubCommit {
   repo: string;
 }
 
-async function makeGitHubRequest(
-  url: string,
+interface GitHubGraphQLResponse<T> {
+  data: T;
+  errors?: Array<{
+    message: string;
+    locations?: Array<{ line: number; column: number }>;
+    path?: string[];
+  }>;
+}
+
+interface GitHubGraphQLVariables {
+  [key: string]: string | number | boolean | null;
+}
+
+interface GitHubRESTCommitResponse {
+  items: Array<{
+    commit: {
+      author: {
+        date: string;
+      };
+      message: string;
+    };
+    repository: {
+      full_name: string;
+    };
+  }>;
+}
+
+interface GitHubGraphQLNode {
+  title?: string;
+  number?: number;
+  createdAt?: string;
+  repository?: {
+    name: string;
+    nameWithOwner?: string;
+    full_name?: string;
+  };
+}
+
+interface GitHubGraphQLPageInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+
+interface GitHubGraphQLSearchResponse {
+  search: {
+    nodes: GitHubGraphQLNode[];
+    pageInfo: GitHubGraphQLPageInfo;
+  };
+}
+
+interface GitHubGraphQLUserResponse {
+  user: {
+    repositories: {
+      nodes: Array<{
+        name: string;
+        nameWithOwner: string;
+      }>;
+      pageInfo: GitHubGraphQLPageInfo;
+    };
+  };
+}
+
+interface GitHubGraphQLViewerResponse {
+  viewer: {
+    login: string;
+  };
+}
+
+/**
+ * Makes a minimal GraphQL request to GitHub for PR searching
+ * (We cannot do commits search via GraphQL; commits remain on REST).
+ */
+async function makeGitHubGraphQLRequest<T>(
   token: string,
-  customAcceptHeader?: string,
+  query: string,
+  variables: GitHubGraphQLVariables = {},
   retryCount = 0,
   maxRetries = 3
-) {
+): Promise<GitHubGraphQLResponse<T>> {
+  const url = 'https://api.github.com/graphql';
   try {
-    console.log(`Making GitHub API request to: ${url}`);
+    console.log(`Making GitHub GraphQL request: ${JSON.stringify(variables)}`);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/vnd.github.v4+json',
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+
+    // Log rate limit information
+    const rateLimit = {
+      limit: response.headers.get('X-RateLimit-Limit') || 'unknown',
+      remaining: response.headers.get('X-RateLimit-Remaining') || 'unknown',
+      reset: response.headers.get('X-RateLimit-Reset')
+        ? new Date(
+            Number(response.headers.get('X-RateLimit-Reset')) * 1000
+          ).toLocaleString()
+        : 'unknown',
+      resetSeconds: response.headers.get('X-RateLimit-Reset')
+        ? Number(response.headers.get('X-RateLimit-Reset')) -
+          Math.floor(Date.now() / 1000)
+        : 0,
+    };
+    console.log(
+      `GitHub API rate limit: ${rateLimit.remaining}/${rateLimit.limit}, resets at ${rateLimit.reset} (in ${rateLimit.resetSeconds} seconds)`
+    );
+
+    // Handle rate limiting or potential 403 with 0 remaining
+    if (
+      (response.status === 403 &&
+        response.headers.get('X-RateLimit-Remaining') === '0') ||
+      response.status === 429
+    ) {
+      if (retryCount < maxRetries) {
+        let waitTime = 0;
+        if (response.headers.get('X-RateLimit-Reset')) {
+          waitTime =
+            Number(response.headers.get('X-RateLimit-Reset')) * 1000 -
+            Date.now() +
+            1000;
+          waitTime = Math.min(waitTime, 10 * 60 * 1000); // cap at 10 minutes
+        } else {
+          // exponential backoff with jitter
+          waitTime = Math.min(
+            1000 * Math.pow(2, retryCount) + Math.random() * 1000,
+            60000
+          );
+        }
+
+        console.log(
+          `Rate limit hit. Retrying in ${Math.floor(waitTime / 1000)} seconds (retry ${
+            retryCount + 1
+          }/${maxRetries})...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        return makeGitHubGraphQLRequest<T>(
+          token,
+          query,
+          variables,
+          retryCount + 1,
+          maxRetries
+        );
+      }
+
+      throw new Error(
+        `GitHub API rate limit exceeded. Resets at ${rateLimit.reset}. Please try again later.`
+      );
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `GitHub GraphQL API error (${response.status})`;
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.errors) {
+          errorMessage += `: ${JSON.stringify(errorData.errors)}`;
+        } else {
+          errorMessage += `: ${JSON.stringify(errorData)}`;
+        }
+      } catch {
+        errorMessage += `: ${errorText}`;
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    if (data.errors) {
+      throw new Error(
+        `GitHub GraphQL response errors: ${JSON.stringify(data.errors)}`
+      );
+    }
+
+    return data as GitHubGraphQLResponse<T>;
+  } catch (error) {
+    console.error(`Error in makeGitHubGraphQLRequest:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Minimal REST-based fetch for commits, so we can filter by committer-date.
+ */
+async function makeGitHubRESTRequest(
+  url: string,
+  token: string,
+  retryCount = 0,
+  maxRetries = 3
+): Promise<GitHubRESTCommitResponse> {
+  try {
+    console.log(`Making GitHub REST request to: ${url}`);
 
     const response = await fetch(url, {
       headers: {
-        Accept: customAcceptHeader || 'application/vnd.github.v3+json',
+        Accept: 'application/vnd.github.v3+json',
         Authorization: `Bearer ${token}`,
       },
     });
 
-    // Log rate limit information
+    // Rate limit check
     const rateLimit = {
       limit: response.headers.get('X-RateLimit-Limit'),
       remaining: response.headers.get('X-RateLimit-Remaining'),
@@ -58,26 +244,22 @@ async function makeGitHubRequest(
       `GitHub API rate limit: ${rateLimit.remaining}/${rateLimit.limit}, resets at ${rateLimit.reset} (in ${rateLimit.resetSeconds} seconds)`
     );
 
-    // Handle rate limiting
     if (
       (response.status === 403 &&
         response.headers.get('X-RateLimit-Remaining') === '0') ||
       response.status === 429
     ) {
       if (retryCount < maxRetries) {
-        // Calculate backoff time - either use reset time from headers or exponential backoff
         let waitTime = 0;
-
         if (response.headers.get('X-RateLimit-Reset')) {
-          // Use the reset time from headers, plus a small buffer
           waitTime =
             Number(response.headers.get('X-RateLimit-Reset')) * 1000 -
             Date.now() +
             1000;
-          // Cap the wait time at 10 minutes to avoid excessive waiting
+          // cap at 10 minutes
           waitTime = Math.min(waitTime, 10 * 60 * 1000);
         } else {
-          // Use exponential backoff with jitter
+          // exponential backoff with jitter
           waitTime = Math.min(
             1000 * Math.pow(2, retryCount) + Math.random() * 1000,
             60000
@@ -85,22 +267,13 @@ async function makeGitHubRequest(
         }
 
         console.log(
-          `Rate limit hit. Retrying in ${Math.ceil(waitTime / 1000)} seconds (retry ${retryCount + 1}/${maxRetries})...`
+          `Rate limit hit. Retrying in ${Math.floor(waitTime / 1000)} seconds (retry ${
+            retryCount + 1
+          }/${maxRetries})...`
         );
-
-        // Wait for the calculated time
         await new Promise((resolve) => setTimeout(resolve, waitTime));
-
-        // Retry the request
-        return makeGitHubRequest(
-          url,
-          token,
-          customAcceptHeader,
-          retryCount + 1,
-          maxRetries
-        );
+        return makeGitHubRESTRequest(url, token, retryCount + 1, maxRetries);
       }
-
       const resetTime = rateLimit.reset;
       throw new Error(
         `GitHub API rate limit exceeded. Resets at ${resetTime}. Please try again later.`
@@ -109,13 +282,14 @@ async function makeGitHubRequest(
 
     if (!response.ok) {
       const errorText = await response.text();
-      let errorMessage = `GitHub API error (${response.status})`;
+      let errorMessage = `GitHub REST API error (${response.status})`;
 
       try {
         const errorData = JSON.parse(errorText);
-        errorMessage += `: ${errorData.message || errorText}`;
-        if (errorData.errors) {
-          errorMessage += ` - ${JSON.stringify(errorData.errors)}`;
+        if (errorData.message) {
+          errorMessage += `: ${errorData.message}`;
+        } else {
+          errorMessage += `: ${errorText}`;
         }
       } catch {
         errorMessage += `: ${errorText}`;
@@ -124,52 +298,113 @@ async function makeGitHubRequest(
       throw new Error(errorMessage);
     }
 
-    const data = await response.json();
-    return data;
+    return response.json() as Promise<GitHubRESTCommitResponse>;
   } catch (error) {
-    console.error(`Error in makeGitHubRequest for ${url}:`, error);
+    console.error(`Error in makeGitHubRESTRequest for ${url}:`, error);
     throw error;
   }
 }
 
 /**
- * Processes an array of items with a rate-limited API function
- * @param items Array of items to process
- * @param processFn Function that processes a single item and returns a promise
- * @param batchSize Number of items to process in parallel
- * @param delayBetweenBatches Delay in ms between batches to avoid rate limiting
+ * Fetch PRs using GraphQL Search (type: ISSUE).
  */
-async function processBatchedRequests<T, R>(
-  items: T[],
-  processFn: (item: T) => Promise<R>,
-  batchSize = 10,
-  delayBetweenBatches = 1000
-): Promise<R[]> {
-  const results: R[] = [];
+async function fetchUserPRs(
+  repos: string[],
+  username: string,
+  startDate: string,
+  endDate: string,
+  token: string
+): Promise<GitHubPR[]> {
+  console.log(
+    `Fetching PRs (GraphQL) for ${username} from ${startDate} to ${endDate} across ${repos.length} repositories`
+  );
 
-  // Process in batches
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
+  // Increase batch size to 10
+  const batchSize = 10;
+  const delayBetweenBatches = 3000;
+  let results: GitHubPR[] = [];
+
+  async function fetchRepoPRs(repo: string): Promise<GitHubPR[]> {
+    const repoNamePart = repo.includes('/') ? repo : `UnknownOrg/${repo}`;
+    const searchQuery = `repo:${repoNamePart} author:${username} created:${startDate}..${endDate} type:pr`;
+
+    const repoPRs: GitHubPR[] = [];
+    let hasNextPage = true;
+    let afterCursor: string | null = null;
+
+    const gqlQuery = `
+      query($searchQuery: String!, $after: String) {
+        search(query: $searchQuery, type: ISSUE, first: 100, after: $after) {
+          nodes {
+            ... on PullRequest {
+              number
+              title
+              createdAt
+              repository {
+                name
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    `;
+
+    while (hasNextPage) {
+      const variables = { searchQuery, after: afterCursor };
+      const data = await makeGitHubGraphQLRequest<GitHubGraphQLSearchResponse>(
+        token,
+        gqlQuery,
+        variables
+      );
+      const currentNodes = (data.data.search.nodes || []).filter(
+        (node): node is GitHubGraphQLNode => node !== null
+      );
+      const pageInfo = data.data.search.pageInfo;
+
+      hasNextPage = pageInfo.hasNextPage;
+      afterCursor = pageInfo.endCursor;
+
+      currentNodes.forEach((node) => {
+        const { title, number, createdAt, repository } = node;
+        if (title && number && createdAt && repository?.name) {
+          repoPRs.push({
+            title,
+            number,
+            createdAt,
+            repo: repository.name,
+          });
+        }
+      });
+    }
+
+    return repoPRs;
+  }
+
+  for (let i = 0; i < repos.length; i += batchSize) {
+    const batch = repos.slice(i, i + batchSize);
     console.log(
-      `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(items.length / batchSize)} (${batch.length} items)`
+      `Fetching PR batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(repos.length / batchSize)}`
     );
 
-    // Process batch in parallel
-    const batchResults = await Promise.all(
-      batch.map((item) =>
-        processFn(item).catch((error) => {
-          console.error(`Error processing item:`, error);
-          return null;
-        })
-      )
+    const batchData = await Promise.all(
+      batch.map(async (r) => {
+        try {
+          return await fetchRepoPRs(r);
+        } catch (error) {
+          console.error(`Error fetching PRs for ${r}`, error);
+          return [];
+        }
+      })
     );
 
-    // Add successful results
-    results.push(...(batchResults.filter((result) => result !== null) as R[]));
+    results = results.concat(...batchData);
 
-    // If not the last batch, wait before processing the next one
-    if (i + batchSize < items.length) {
-      console.log(`Waiting ${delayBetweenBatches}ms before next batch...`);
+    if (i + batchSize < repos.length) {
+      console.log(`Waiting ${delayBetweenBatches}ms before next PR batch...`);
       await new Promise((resolve) => setTimeout(resolve, delayBetweenBatches));
     }
   }
@@ -177,57 +412,95 @@ async function processBatchedRequests<T, R>(
   return results;
 }
 
-async function getDateRange(
-  offsetWeeks: number = 0,
-  startDateStr?: string,
-  endDateStr?: string
-): Promise<{ startDate: string; endDate: string }> {
-  // If explicit dates are provided, use them
-  if (startDateStr && endDateStr) {
-    return {
-      startDate: startDateStr,
-      endDate: endDateStr,
-    };
+/**
+ * Fetch commits using the REST API because GraphQL search does not support 'type: COMMIT'.
+ */
+async function fetchUserCommits(
+  repos: string[],
+  username: string,
+  startDate: string,
+  endDate: string,
+  token: string
+): Promise<GitHubCommit[]> {
+  console.log(
+    `Fetching commits (REST) for ${username} from ${startDate} to ${endDate} across ${repos.length} repositories`
+  );
+
+  // Increase batch size to 10 as well
+  const batchSize = 10;
+  const delayBetweenBatches = 3000;
+  let results: GitHubCommit[] = [];
+
+  async function fetchRepoCommits(repo: string): Promise<GitHubCommit[]> {
+    try {
+      const searchQuery = `repo:${repo} author:${username} committer-date:${startDate}..${endDate}`;
+      // REST search
+      let allCommits: GitHubCommit[] = [];
+      let page = 1;
+      let hasMorePages = true;
+
+      while (hasMorePages) {
+        const url = `https://api.github.com/search/commits?q=${encodeURIComponent(
+          searchQuery
+        )}&page=${page}&per_page=100`;
+        const data = await makeGitHubRESTRequest(url, token);
+        if (data.items && Array.isArray(data.items)) {
+          const commits = data.items.map((item) => {
+            return {
+              commit: {
+                author: {
+                  date: item.commit.author.date,
+                },
+                message: item.commit.message,
+              },
+              repo: item.repository.full_name.split('/')[1],
+            } as GitHubCommit;
+          });
+          allCommits = allCommits.concat(commits);
+          hasMorePages = data.items.length === 100;
+          page++;
+        } else {
+          hasMorePages = false;
+        }
+      }
+      return allCommits;
+    } catch (error) {
+      console.error(`Error fetching commits for ${repo}`, error);
+      return [];
+    }
   }
 
-  // Otherwise, calculate based on current date
-  const now = new Date();
+  for (let i = 0; i < repos.length; i += batchSize) {
+    const batch = repos.slice(i, i + batchSize);
+    console.log(
+      `Fetching commits batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(repos.length / batchSize)}`
+    );
 
-  if (offsetWeeks === 0) {
-    // Default case: previous 7 days from today
-    const endDate = new Date(now);
-    const startDate = new Date(now);
-    startDate.setDate(now.getDate() - 7); // Go back 7 days
+    const batchCommits = await Promise.all(batch.map(fetchRepoCommits));
+    results = results.concat(...batchCommits);
 
-    return {
-      startDate: formatDate(startDate),
-      endDate: formatDate(endDate),
-    };
-  } else {
-    // Support for legacy offset behavior
-    // Get the date for last Sunday
-    const day = now.getDay();
-    const diff = day === 0 ? 7 : day; // If today is Sunday, go back 7 days
-
-    const lastSunday = new Date(now);
-    lastSunday.setDate(now.getDate() - diff - 7 * offsetWeeks);
-
-    const nextSaturday = new Date(lastSunday);
-    nextSaturday.setDate(lastSunday.getDate() + 6);
-
-    return {
-      startDate: formatDate(lastSunday),
-      endDate: formatDate(nextSaturday),
-    };
+    // Delay between batches
+    if (i + batchSize < repos.length) {
+      console.log(
+        `Waiting ${delayBetweenBatches}ms before next commit batch...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayBetweenBatches));
+    }
   }
+
+  return results;
 }
 
-// Helper function to format dates without external dependencies
+/**
+ * Helper function to format a date as YYYY-MM-DD
+ */
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+  return date.toISOString().split('T')[0];
 }
 
-// Helper function to format display dates
+/**
+ * Helper function to format display dates
+ */
 function formatDisplayDate(date: Date): string {
   const days = [
     'Sunday',
@@ -245,160 +518,51 @@ function formatDisplayDate(date: Date): string {
   return `${dayName} ${month}/${day}`;
 }
 
-async function fetchUserPRs(
-  repos: string[],
-  username: string,
-  startDate: string,
-  endDate: string,
-  token: string
-): Promise<GitHubPR[]> {
-  console.log(
-    `Fetching PRs for ${username} from ${startDate} to ${endDate} across ${repos.length} repositories`
-  );
+async function getDateRange(
+  offsetWeeks: number = 0,
+  startDateStr?: string,
+  endDateStr?: string
+): Promise<{ startDate: string; endDate: string }> {
+  // If explicit dates are provided, use them
+  if (startDateStr && endDateStr) {
+    return {
+      startDate: startDateStr,
+      endDate: endDateStr,
+    };
+  }
 
-  // Use the batching utility to process repositories in batches
-  const fetchReposPRs = async (repo: string): Promise<GitHubPR[]> => {
-    try {
-      // The repo should already be in the format "org/repo" at this point
-      const fullRepoName = repo;
-      const repoName = repo.includes('/') ? repo.split('/')[1] : repo;
+  // Otherwise, calculate based on current date
+  const now = new Date();
+  if (offsetWeeks === 0) {
+    // Default case: previous 7 days from today
+    const endDate = new Date(now);
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - 7);
 
-      console.log(`Fetching PRs for repository: ${fullRepoName}`);
+    return {
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+    };
+  } else {
+    // Legacy offset: weeks from last Sunday
+    const day = now.getDay();
+    const diff = day === 0 ? 7 : day;
+    const lastSunday = new Date(now);
+    lastSunday.setDate(now.getDate() - diff - 7 * offsetWeeks);
+    const nextSaturday = new Date(lastSunday);
+    nextSaturday.setDate(lastSunday.getDate() + 6);
 
-      const searchQuery = `repo:${fullRepoName} author:${username} created:${startDate}..${endDate} type:pr`;
-      const baseUrl = `https://api.github.com/search/issues?q=${encodeURIComponent(searchQuery)}`;
-
-      // For search API, we can't use fetchAllPages directly because the response structure is different
-      // Instead, we'll manually handle pagination for search results
-      let page = 1;
-      let hasMorePages = true;
-      let repoPRs: GitHubPR[] = [];
-
-      while (hasMorePages) {
-        const url = `${baseUrl}&page=${page}&per_page=100`;
-        const data = await makeGitHubRequest(url, token);
-
-        if (data.items && Array.isArray(data.items)) {
-          const prs = data.items.map(
-            (item: { title: string; number: number; created_at: string }) => ({
-              title: item.title,
-              number: item.number,
-              createdAt: item.created_at,
-              repo: repoName,
-            })
-          );
-
-          repoPRs = [...repoPRs, ...prs];
-
-          // Check if we have more pages
-          hasMorePages = data.items.length === 100;
-          page++;
-        } else {
-          hasMorePages = false;
-        }
-      }
-
-      return repoPRs;
-    } catch (error) {
-      console.error(`Error fetching PRs for ${repo}:`, error);
-      return [];
-    }
-  };
-
-  // Process repositories in batches to avoid rate limits
-  const allPRs = await processBatchedRequests(repos, fetchReposPRs, 10, 2000);
-
-  // Flatten the array of arrays
-  return allPRs.flat();
+    return {
+      startDate: formatDate(lastSunday),
+      endDate: formatDate(nextSaturday),
+    };
+  }
 }
 
-async function fetchUserCommits(
-  repos: string[],
-  username: string,
-  startDate: string,
-  endDate: string,
-  token: string
-): Promise<GitHubCommit[]> {
-  console.log(
-    `Fetching commits for ${username} from ${startDate} to ${endDate} across ${repos.length} repositories`
-  );
-
-  // Use the batching utility to process repositories in batches
-  const fetchReposCommits = async (repo: string): Promise<GitHubCommit[]> => {
-    try {
-      // The repo should already be in the format "org/repo" at this point
-      const fullRepoName = repo;
-      const repoName = repo.includes('/') ? repo.split('/')[1] : repo;
-
-      console.log(`Fetching commits for repository: ${fullRepoName}`);
-
-      // For commits search, we need to use the special header for the search API
-      const searchQuery = `repo:${fullRepoName} author:${username} committer-date:${startDate}..${endDate}`;
-      const baseUrl = `https://api.github.com/search/commits?q=${encodeURIComponent(searchQuery)}`;
-
-      // For search API, we can't use fetchAllPages directly because the response structure is different
-      // Instead, we'll manually handle pagination for search results
-      let page = 1;
-      let hasMorePages = true;
-      let repoCommits: GitHubCommit[] = [];
-
-      while (hasMorePages) {
-        const url = `${baseUrl}&page=${page}&per_page=100`;
-        const data = await makeGitHubRequest(
-          url,
-          token,
-          'application/vnd.github.cloak-preview+json'
-        );
-
-        if (data.items && Array.isArray(data.items)) {
-          const commits = data.items.map(
-            (item: {
-              commit: {
-                author: {
-                  date: string;
-                };
-                message: string;
-              };
-            }) => ({
-              commit: {
-                author: {
-                  date: item.commit.author.date,
-                },
-                message: item.commit.message,
-              },
-              repo: repoName,
-            })
-          );
-
-          repoCommits = [...repoCommits, ...commits];
-
-          // Check if we have more pages
-          hasMorePages = data.items.length === 100;
-          page++;
-        } else {
-          hasMorePages = false;
-        }
-      }
-
-      return repoCommits;
-    } catch (error) {
-      console.error(`Error fetching commits for ${repo}:`, error);
-      return [];
-    }
-  };
-
-  // Process repositories in batches to avoid rate limits
-  const allCommits = await processBatchedRequests(
-    repos,
-    fetchReposCommits,
-    10,
-    2000
-  );
-
-  // Flatten the array of arrays
-  return allCommits.flat();
-}
-
+/**
+ * Uses GraphQL to fetch a list of user personal repos quickly, plus tries to fetch from org
+ * by searching commits (REST-based approach).
+ */
 async function fetchUserRepositories(
   username: string,
   organization: string,
@@ -416,241 +580,91 @@ async function fetchUserRepositories(
     const startDate = formatDate(lookbackDate);
     const endDate = formatDate(new Date());
 
-    // Try multiple approaches to find repositories the user has contributed to
     const repoSet = new Set<string>();
 
-    // Approach 0: Fetch user's personal repositories
+    // Approach 0: GraphQL user(...) for personal repos
     console.log(`Fetching personal repositories for ${username}`);
-    try {
-      // GitHub API paginates results, so we need to fetch all pages
-      let page = 1;
-      let hasMorePages = true;
-      const personalRepos: Set<string> = new Set();
 
-      while (hasMorePages) {
-        const userReposUrl = `https://api.github.com/users/${username}/repos?per_page=100&page=${page}`;
-        const userReposData = await makeGitHubRequest(userReposUrl, token);
-
-        if (Array.isArray(userReposData) && userReposData.length > 0) {
-          // Include all personal repositories
-          userReposData.forEach((repo) => {
-            if (repo.owner && repo.owner.login === username) {
-              personalRepos.add(repo.full_name);
+    const personalReposQuery = `
+      query($login: String!, $after: String) {
+        user(login: $login) {
+          repositories(first: 100, after: $after, privacy: PUBLIC, ownerAffiliations: OWNER) {
+            nodes {
+              name
+              nameWithOwner
             }
-          });
-
-          // Check if we have more pages
-          hasMorePages = userReposData.length === 100;
-          page++;
-
-          // Add a delay between pages to avoid rate limiting
-          if (hasMorePages) {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
-        } else {
-          hasMorePages = false;
         }
       }
+    `;
 
-      // Add personal repositories to the main set
-      personalRepos.forEach((repo) => repoSet.add(repo));
-      console.log(`Found ${personalRepos.size} personal repositories`);
-    } catch (error) {
-      console.error(`Error fetching personal repositories:`, error);
-    }
+    let personalHasNext = true;
+    let personalAfter: string | null = null;
 
-    // Approach 1: Search for commits by the user across the organization
-    console.log(
-      `Approach 1: Searching for commits by ${username} in ${organization} from ${startDate} to ${endDate}`
-    );
-    const searchQuery = `org:${organization} author:${username} committer-date:${startDate}..${endDate}`;
-    const url = `https://api.github.com/search/commits?q=${encodeURIComponent(searchQuery)}&per_page=100`;
-
-    try {
-      const data = await makeGitHubRequest(
-        url,
+    while (personalHasNext) {
+      const data = await makeGitHubGraphQLRequest<GitHubGraphQLUserResponse>(
         token,
-        'application/vnd.github.cloak-preview+json'
+        personalReposQuery,
+        {
+          login: username,
+          after: personalAfter,
+        }
       );
-
-      // Log the response structure to help debug
-      console.log(
-        `GitHub API response: total_count=${data.total_count}, items_length=${data.items?.length || 0}`
-      );
-
-      if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-        // Extract unique repository names
-        data.items.forEach(
-          (item: { repository?: { name?: string; full_name?: string } }) => {
-            if (item.repository && item.repository.full_name) {
-              repoSet.add(item.repository.full_name);
-            } else if (item.repository && item.repository.name) {
-              repoSet.add(`${organization}/${item.repository.name}`);
-            }
-          }
-        );
-
-        console.log(`Found ${repoSet.size} repositories from commit history`);
-      }
-    } catch (error) {
-      console.error(`Error in approach 1:`, error);
+      const repoNodes = data.data.user.repositories.nodes || [];
+      repoNodes.forEach((node) => {
+        if (node.nameWithOwner) {
+          repoSet.add(node.nameWithOwner);
+        }
+      });
+      personalHasNext = data.data.user.repositories.pageInfo.hasNextPage;
+      personalAfter = data.data.user.repositories.pageInfo.endCursor;
     }
 
-    // If we didn't find any org repos with approach 1, try approach 2
-    // Note: We still continue even if we found personal repos
-    if (repoSet.size === 0) {
-      // Approach 2: Get user's repositories directly
-      console.log(`Approach 2: Fetching user's repositories directly`);
-      try {
-        // GitHub API paginates results, so we need to fetch all pages
-        let page = 1;
-        let hasMorePages = true;
-        const userOrgRepos: Set<string> = new Set();
+    console.log(`Found ${repoSet.size} personal repositories via GraphQL.`);
 
-        while (hasMorePages) {
-          const userReposUrl = `https://api.github.com/users/${username}/repos?per_page=100&page=${page}`;
-          const userReposData = await makeGitHubRequest(userReposUrl, token);
-
-          if (Array.isArray(userReposData) && userReposData.length > 0) {
-            // Include both organization repositories and personal repositories
-            userReposData.forEach((repo) => {
-              if (
-                (repo.owner && repo.owner.login === organization) ||
-                (repo.owner && repo.owner.login === username)
-              ) {
-                userOrgRepos.add(repo.full_name);
-              }
-            });
-
-            // Check if we have more pages
-            hasMorePages = userReposData.length === 100;
-            page++;
-
-            // Add a delay between pages to avoid rate limiting
-            if (hasMorePages) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-          } else {
-            hasMorePages = false;
-          }
-        }
-
-        // Add user's repositories to the main set
-        userOrgRepos.forEach((repo) => repoSet.add(repo));
-        console.log(
-          `Found ${userOrgRepos.size} repositories from user's repos`
-        );
-      } catch (error) {
-        console.error(`Error in approach 2:`, error);
-      }
-    }
-
-    // If we still didn't find any repos, try approach 3
-    if (repoSet.size === 0) {
-      // Approach 3: Get organization repositories and check for user contributions
-      console.log(
-        `Approach 3: Checking organization repositories for user contributions`
-      );
-      try {
-        // GitHub API paginates results, so we need to fetch all pages
-        let page = 1;
-        let hasMorePages = true;
-        const orgRepos: { full_name: string; updated_at: string }[] = [];
-
-        while (hasMorePages) {
-          const orgReposUrl = `https://api.github.com/orgs/${organization}/repos?per_page=100&page=${page}`;
-          const orgReposData = await makeGitHubRequest(orgReposUrl, token);
-
-          if (Array.isArray(orgReposData) && orgReposData.length > 0) {
-            orgRepos.push(...orgReposData);
-
-            // Check if we have more pages
-            hasMorePages = orgReposData.length === 100;
-            page++;
-
-            // Add a delay between pages to avoid rate limiting
-            if (hasMorePages) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-          } else {
-            hasMorePages = false;
-          }
-        }
-
-        if (orgRepos.length > 0) {
-          // Get the most active repositories in the organization
-          const activeRepos = orgRepos
-            .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-            .slice(0, 30);
-
-          console.log(
-            `Checking ${activeRepos.length} most active repositories in the organization`
-          );
-
-          // Define a function to check if a user is a contributor to a repository
-          const checkRepoContributor = async (repo: {
-            full_name: string;
-          }): Promise<string | null> => {
-            try {
-              const contributorsUrl = `https://api.github.com/repos/${repo.full_name}/contributors`;
-              const contributorsData = await makeGitHubRequest(
-                contributorsUrl,
-                token
-              );
-
-              if (Array.isArray(contributorsData)) {
-                const isContributor = contributorsData.some(
-                  (contributor) => contributor.login === username
-                );
-
-                if (isContributor) {
-                  console.log(`Found user as contributor to ${repo.full_name}`);
-                  return repo.full_name;
-                }
-              }
-              return null;
-            } catch (error) {
-              console.error(
-                `Error checking contributors for ${repo.full_name}:`,
-                error
-              );
-              return null;
-            }
-          };
-
-          // Process repositories in batches to avoid rate limits
-          const contributorRepos = await processBatchedRequests(
-            activeRepos,
-            checkRepoContributor,
-            5, // Smaller batch size for contributor checks
-            1000 // Delay between batches
-          );
-
-          // Add the repositories where the user is a contributor
-          contributorRepos
-            .filter((repoName): repoName is string => repoName !== null)
-            .forEach((repoName) => repoSet.add(repoName));
-
-          console.log(
-            `Found ${repoSet.size} repositories from organization repos`
-          );
-        }
-      } catch (error) {
-        console.error(`Error in approach 3:`, error);
-      }
-    }
-
-    const repos = Array.from(repoSet);
+    // Approach 1 (REST) searching for commits in the org
     console.log(
-      `Total repositories found for user ${username}: ${repos.length}`
+      `Searching for commits by ${username} in org ${organization} from ${startDate}..${endDate}`
     );
-    return repos;
+    let page = 1;
+    let hasMorePages = true;
+    while (hasMorePages) {
+      const searchQuery = `org:${organization} author:${username} committer-date:${startDate}..${endDate}`;
+      const url = `https://api.github.com/search/commits?q=${encodeURIComponent(
+        searchQuery
+      )}&per_page=100&page=${page}`;
+      // Use the same accept for commits
+      const data = await makeGitHubRESTRequest(url, token);
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        data.items.forEach((item) => {
+          if (item.repository && item.repository.full_name) {
+            repoSet.add(item.repository.full_name);
+          }
+        });
+        hasMorePages = data.items.length === 100;
+        page++;
+      } else {
+        hasMorePages = false;
+      }
+    }
+
+    console.log(`Total repos after org commit search: ${repoSet.size}.`);
+
+    return Array.from(repoSet);
   } catch (error) {
     console.error(`Error fetching user repositories:`, error);
     return [];
   }
 }
 
+/**
+ * Generates a weekly report: queries for PRs (via GraphQL) and commits (via REST),
+ * organizes them day by day, and optionally adds an AI summary from OpenAI.
+ */
 async function generateWeeklyReport(
   repos: string[],
   startDate: string,
@@ -660,22 +674,21 @@ async function generateWeeklyReport(
   openAiApiKey?: string,
   openAiModel: string = 'gpt-4o'
 ): Promise<string> {
-  // Fetch PRs and commits
   try {
+    // PRs via GraphQL, commits via REST
     const [prs, commits] = await Promise.all([
       fetchUserPRs(repos, username, startDate, endDate, token),
       fetchUserCommits(repos, username, startDate, endDate, token),
     ]);
 
-    console.log(`Found ${prs.length} PRs and ${commits.length} commits`);
+    console.log(`Found ${prs.length} PRs and ${commits.length} commits.`);
 
-    // Generate report content
+    // Prepare the markdown report
     let reportContent = `# Weekly Report for ${username}: ${startDate} to ${endDate}\n\n`;
 
-    // Create a date range for the week
     const startDateObj = new Date(startDate);
 
-    // For each day of the week
+    // We iterate for 7 days
     for (let i = 0; i < 7; i++) {
       const currentDate = new Date(startDateObj);
       currentDate.setDate(startDateObj.getDate() + i);
@@ -692,7 +705,7 @@ async function generateWeeklyReport(
         for (const pr of dayPRs) {
           reportContent += `  - [#${pr.number}] ${pr.title} (${pr.repo})\n`;
         }
-        reportContent += '\n';
+        reportContent += `\n`;
       }
 
       // Filter commits for this day
@@ -701,18 +714,17 @@ async function generateWeeklyReport(
       );
       if (dayCommits.length > 0) {
         reportContent += `  ### Commits\n\n`;
-        for (const commit of dayCommits) {
-          // Replace newlines in commit messages with spaces
-          const message = commit.commit.message.replace(/\n/g, ' ');
-          reportContent += `  - ${message} (${commit.repo})\n`;
+        for (const c of dayCommits) {
+          const message = c.commit.message.replace(/\n/g, ' ');
+          reportContent += `  - ${message} (${c.repo})\n`;
         }
-        reportContent += '\n';
+        reportContent += `\n`;
       }
 
-      reportContent += '\n';
+      reportContent += `\n`;
     }
 
-    // Generate AI summary if API key is provided
+    // Optionally call OpenAI to generate a summary
     if (openAiApiKey) {
       try {
         const response = await fetch(
@@ -741,14 +753,9 @@ async function generateWeeklyReport(
         }
       } catch (error) {
         console.error('Error generating AI summary:', error);
-        reportContent +=
-          '\n### Quick Summary:\nFailed to generate AI summary.\n';
+        reportContent += `\n### Quick Summary:\nFailed to generate AI summary.\n`;
       }
     }
-
-    // Remove file writing code and just return the content
-    // const reportFileName = `weekly_report_${startDate}_to_${endDate}.md`;
-    // await fs.writeFile(reportFileName, reportContent);
 
     return reportContent;
   } catch (error) {
@@ -788,7 +795,7 @@ function createWeeklyReport() {
   return new Tool(
     paramsSchema,
     'weekly_report',
-    'Generates a weekly report of GitHub activity for a specific user including PRs and commits',
+    'Generates a weekly report of GitHub activity for a specific user including PRs (GraphQL) and commits (REST)',
     async ({
       username,
       offset = 0,
@@ -807,67 +814,62 @@ function createWeeklyReport() {
         );
       }
 
-      // Validate GitHub token by making a test request
+      // Validate with a small GraphQL call
       try {
-        await makeGitHubRequest('https://api.github.com/user', GITHUB_TOKEN);
+        const testQuery = `query { viewer { login } }`;
+        await makeGitHubGraphQLRequest<GitHubGraphQLViewerResponse>(
+          GITHUB_TOKEN,
+          testQuery
+        );
       } catch (error) {
-        console.error('Error validating GitHub token:', error);
+        console.error('Error validating GitHub token with GraphQL:', error);
         if (error instanceof Error) {
           return `Error: GitHub token validation failed - ${error.message}`;
         }
         return 'Error: GitHub token validation failed';
       }
 
-      // Default repositories as fallback if we can't fetch user repos
+      // We'll default to these if we can't find repos
       const fallbackRepos = [
-        'backend-packages',
-        'triplewhale-backend',
-        'triplewhale-client',
-        'triplewhale-admin',
-        'fetchers',
-        'devops',
-        'ai',
+        `${organization}/backend-packages`,
+        `${organization}/triplewhale-backend`,
+        `${organization}/triplewhale-client`,
+        `${organization}/triplewhale-admin`,
+        `${organization}/fetchers`,
+        `${organization}/devops`,
+        `${organization}/ai`,
       ];
 
-      let reposToUse: string[] = [];
+      let finalRepos: string[] = [];
 
       if (!repos) {
-        // Try to fetch repositories the user has committed to
+        // Attempt to fetch repos
         try {
           console.log(
-            `Attempting to fetch repositories for user: ${username} in organization: ${organization} (and personal repositories)`
+            `Attempting to fetch repositories for ${username} in ${organization}`
           );
           const userRepos = await fetchUserRepositories(
             username,
             organization,
             GITHUB_TOKEN
           );
-
           if (userRepos.length > 0) {
             console.log(
-              `Successfully found ${userRepos.length} repositories (including personal repos) for user ${username}`
+              `Found ${userRepos.length} repos for user, plus fallback merged in`
             );
-            reposToUse = [
-              ...userRepos,
-              ...fallbackRepos.map((repo) => `${organization}/${repo}`),
-            ];
-            // Remove duplicates
-            reposToUse = [...new Set(reposToUse)];
+            finalRepos = [...new Set([...userRepos, ...fallbackRepos])];
           } else {
-            console.log('No repositories found for user, using fallback list');
-            // Format fallback repos with organization
-            reposToUse = fallbackRepos.map((repo) => `${organization}/${repo}`);
+            console.log('No user repos found, using fallback list only.');
+            finalRepos = fallbackRepos;
           }
         } catch (error) {
           console.error('Error fetching user repositories:', error);
-          // Format fallback repos with organization
-          reposToUse = fallbackRepos.map((repo) => `${organization}/${repo}`);
+          finalRepos = fallbackRepos;
         }
       } else {
-        console.log(`Using provided repositories: ${repos.join(', ')}`);
-        // Format provided repos with organization if needed
-        reposToUse = repos.map((repo) =>
-          repo.includes('/') ? repo : `${organization}/${repo}`
+        console.log(`Using provided repos: ${JSON.stringify(repos)}`);
+        finalRepos = repos.map((r) =>
+          r.includes('/') ? r : `${organization}/${r}`
         );
       }
 
@@ -885,7 +887,7 @@ function createWeeklyReport() {
         }
 
         const report = await generateWeeklyReport(
-          reposToUse,
+          finalRepos,
           calculatedStartDate,
           calculatedEndDate,
           GITHUB_TOKEN,
